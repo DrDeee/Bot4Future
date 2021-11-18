@@ -2,44 +2,37 @@ package re.fffutu.bot4future.logging;
 
 import re.fffutu.bot4future.db.Database;
 import re.fffutu.bot4future.util.Crypto;
+import re.fffutu.bot4future.util.StringUtil;
 import redis.clients.jedis.Jedis;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 public class MessageStore {
     private Crypto crypto = new Crypto();
 
-    public CompletableFuture saveMessageById(String message, long guildId, long channelId, long messageId, long userId) {
+    public CompletableFuture saveMessage(String message, long guildId, long channelId, long messageId, long userId) {
         return CompletableFuture.runAsync(() -> {
             String guildStr = "" + guildId;
             String channelStr = "" + channelId;
 
-            String password = guildStr.substring(10) + channelStr.substring(10);
-            setMessage(crypto.encryptText(userId + message, password), messageId);
-        });
-    }
-
-    public CompletableFuture updateMessageById(String message, long guildId, long channelId, long messageId, long userId) {
-        return CompletableFuture.runAsync(() -> {
-            String guildStr = "" + guildId;
-            String channelStr = "" + channelId;
+            String timeStamp = StringUtil.padStart(System.currentTimeMillis() + "", 22, '0');
 
             String password = guildStr.substring(10) + channelStr.substring(10);
-            setMessage(crypto.encryptText(userId + message, password), messageId);
+            addMessage(crypto.encryptText(StringUtil.padStart(userId + "", 22, '0')
+                    + StringUtil.padStart(channelId + "", 22, '0')
+                    + timeStamp + message, password), messageId);
         });
     }
 
-    public CompletableFuture<String> getMessageById(long guildId, long channelId, long messageId) {
-        return getMessageAndUserIdById(guildId, channelId, messageId).thenApply(s -> {
-            if(s == null) return null;
-            return s.substring(18);
-        });
+    public CompletableFuture updateMessage(String message, long guildId, long channelId, long messageId, long userId) {
+        return saveMessage(message, guildId, channelId, messageId, userId);
     }
 
-    public CompletableFuture<String> getMessageAndUserIdById(long guildId, long channelId, long messageId) {
+
+    public CompletableFuture<String> getMessage(long guildId, long channelId, long messageId) {
         return CompletableFuture.supplyAsync(() -> {
             String guildStr = "" + guildId;
             String channelStr = "" + channelId;
@@ -47,32 +40,43 @@ public class MessageStore {
             String password = guildStr.substring(10) + channelStr.substring(10);
             byte[] cryptoText = getMessage(messageId);
             if (cryptoText == null) return null;
-            return crypto.decryptText(cryptoText, password);
+            return crypto.trimZeros(crypto.decryptText(cryptoText, password).substring(66));
         });
     }
 
-    public CompletableFuture deleteMessageById(long messageId) {
-        return CompletableFuture.runAsync(() -> {
-            deleteMessage(messageId);
+    public CompletableFuture<List<String>> getMessageVersions(long guildId, long channelId, long messageId) {
+        return CompletableFuture.supplyAsync(() -> {
+            String guildStr = "" + guildId;
+            String channelStr = "" + channelId;
+
+            String password = guildStr.substring(10) + channelStr.substring(10);
+            List<byte[]> cryptoTexts = getMessages(messageId);
+            return cryptoTexts.stream().map(bytes -> {
+                if (bytes == null) return null;
+                return crypto.trimZeros(crypto.decryptText(bytes, password));
+            }).collect(Collectors.toList());
         });
     }
 
-    private void setMessage(byte[] encrypted, long messageId) {
-        Jedis jedis = Database.POOL.getResource();
-        jedis.set("message:" + messageId, Base64.getEncoder().encodeToString(encrypted));
-        Database.POOL.returnResource(jedis);
+    private void addMessage(byte[] encrypted, long messageId) {
+        Jedis jedis = Database.create();
+        jedis.lpush("message:" + messageId, Base64.getEncoder().encodeToString(encrypted));
+        Database.close(jedis);
     }
 
     private byte[] getMessage(long messageId) {
-        Jedis jedis = Database.POOL.getResource();
-        String s = jedis.get("message:" + messageId);
-        Database.POOL.returnResource(jedis);
+        Jedis jedis = Database.create();
+        String key = "message:" + messageId;
+        String s = jedis.lindex(key, -1);
+        Database.close(jedis);
         return Base64.getDecoder().decode(s);
     }
 
-    private void deleteMessage(long messageId) {
-        Jedis jedis = Database.POOL.getResource();
-        jedis.set("message:" + messageId, null);
-        Database.POOL.returnResource(jedis);
+    private List<byte[]> getMessages(long messageId) {
+        Jedis jedis = Database.create();
+        List<String> msgs = jedis.lrange("message:" + messageId, 0, -1);
+
+        Database.close(jedis);
+        return msgs.stream().map(s -> Base64.getDecoder().decode(s)).collect(Collectors.toList());
     }
 }

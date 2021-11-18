@@ -1,7 +1,9 @@
 package re.fffutu.bot4future.logging;
 
-import org.javacord.api.entity.Mentionable;
 import org.javacord.api.entity.message.MessageAuthor;
+import org.javacord.api.entity.message.MessageBuilder;
+import org.javacord.api.entity.message.component.ButtonBuilder;
+import org.javacord.api.entity.message.component.ButtonStyle;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.event.message.MessageDeleteEvent;
@@ -19,19 +21,14 @@ import re.fffutu.bot4future.db.Database;
 
 import java.awt.*;
 import java.time.Instant;
-import java.time.OffsetDateTime;
 
 public class EventLogListener implements UserRoleAddListener,
         UserRoleRemoveListener,
         MessageEditListener,
         MessageDeleteListener,
         MessageCreateListener {
-    private MessageStore store = new MessageStore();
 
-    private String trimZeros(String str) {
-        int pos = str.indexOf(0);
-        return pos == -1 ? str : str.substring(0, pos);
-    }
+    private MessageStore store = new MessageStore();
 
     @Override
     public void onUserRoleAdd(UserRoleAddEvent userRoleAddEvent) {
@@ -53,9 +50,9 @@ public class EventLogListener implements UserRoleAddListener,
         long channelId = event.getChannel().getId();
 
         //TODO IGNORED CHANNELS
-        store.getMessageById(guildId, channelId, event.getMessageId()).thenAccept(decryptText -> {
+        store.getMessage(guildId, channelId, event.getMessageId()).thenAccept(decryptText -> {
             if (decryptText == null) decryptText = "`unknown message`";
-            String oldText = trimZeros(decryptText);
+            String oldText = decryptText;
 
             String newText = event.getMessage().get().getContent();
 
@@ -63,9 +60,27 @@ public class EventLogListener implements UserRoleAddListener,
             Database.getChannel(guildId, ChannelType.EVENT_AUDIT).thenAccept(auditOpt -> {
                 auditOpt.ifPresent(id -> {
                     DiscordBot.INSTANCE.api.getTextChannelById(id).ifPresent(channel -> {
-                        channel.sendMessage(new EmbedBuilder()
+                        MessageBuilder builder = new MessageBuilder();
+                        builder.addActionRow(
+                                new ButtonBuilder()
+                                        .setLabel("Zur Nachricht")
+                                        .setUrl(event.getMessageLink().get().toString())
+                                        .setStyle(ButtonStyle.LINK)
+                                        .build(),
+                                new ButtonBuilder()
+                                        .setLabel("Details")
+                                        .setCustomId("msg-details:" + author.getId())
+                                        .setStyle(ButtonStyle.PRIMARY)
+                                        .build(),
+                                new ButtonBuilder()
+                                        .setLabel("Löschen")
+                                        .setCustomId("msg-delete:" + channelId + ":" + event.getMessageId())
+                                        .setStyle(ButtonStyle.DANGER)
+                                        .build()
+                        );
+                        builder.addEmbed(new EmbedBuilder()
                                 .setTimestamp(Instant.now())
-                                .setColor(new Color(0x00ccff))
+                                .setColor(Color.BLUE)
                                 .setTitle("Nachricht bearbeitet")
                                 .setFooter(author.getDisplayName() + " (" + author.getId() + ")",
                                         author.getAvatar())
@@ -74,8 +89,8 @@ public class EventLogListener implements UserRoleAddListener,
 
                                 .addField("Alte Nachricht", oldText)
                                 .addField("Bearbeitete Nachricht", newText)
-                                .addField("Message ID: ", event.getMessageId() + "", false)
-                                .setUrl(event.getMessageLink().get().toString()));
+                                .addField("Message ID: ", event.getMessageId() + "", false));
+                        builder.send(channel);
                     });
                 });
             });
@@ -84,39 +99,45 @@ public class EventLogListener implements UserRoleAddListener,
             long messageId = event.getMessageId();
             long userId = author.getId();
 
-            store.updateMessageById(newText, guildId, channelId, messageId, userId);
+            store.updateMessage(newText, guildId, channelId, messageId, userId);
         });
     }
 
     @Override
     public void onMessageDelete(MessageDeleteEvent event) {
-        System.out.println("debug 1");
         long guildId = event.getServer().get().getId();
         long channelId = event.getChannel().getId();
 
 
         // TODO IGNORED CHANNELS
-        store.getMessageById(guildId,
+        store.getMessage(guildId,
                 channelId, event.getMessageId()).thenAccept(msgContentRaw -> {
             if (msgContentRaw == null) msgContentRaw = "`unknown message`";
-            String msgContent = trimZeros(msgContentRaw);
+            String msgContent = msgContentRaw;
             MessageAuthor author = event.getMessageAuthor().get();
+
             Database.getChannel(guildId, ChannelType.EVENT_AUDIT).thenAccept(auditOpt -> {
                 auditOpt.ifPresent(id -> {
                     DiscordBot.INSTANCE.api.getTextChannelById(id).ifPresent(channel -> {
-                        channel.sendMessage(new EmbedBuilder()
+                        MessageBuilder builder = new MessageBuilder();
+                        builder.addActionRow(new ButtonBuilder()
+                                .setCustomId("msg-details:" + author.getId())
+                                .setStyle(ButtonStyle.PRIMARY)
+                                .setLabel("Details")
+                                .build());
+                        builder.addEmbed(new EmbedBuilder()
                                 .setTitle("Nachricht gelöscht")
                                 .setTimestamp(Instant.now())
-                                .setColor(new Color(0xff9933))
+                                .setColor(Color.ORANGE)
                                 .setFooter(author.getDisplayName()
                                         + " (" + author.getId() + ")", author.getAvatar())
                                 .addInlineField("Channel", "<#" + event.getChannel().getId() + ">")
                                 .addInlineField("User", "<@" + author.getId() + ">")
                                 .addField("Gelöschte Nachricht", msgContent)
                         );
+                        builder.send(channel);
                     });
                 });
-                store.deleteMessageById(event.getMessageId());
             });
         });
     }
@@ -125,7 +146,7 @@ public class EventLogListener implements UserRoleAddListener,
     public void onMessageCreate(MessageCreateEvent event) {
         if (!event.getServer().isPresent() || event.getMessageAuthor().isBotUser()) return;
 
-        store.saveMessageById(event.getMessageContent(),
+        store.saveMessage(event.getMessageContent(),
                 event.getServer().get().getId(),
                 event.getChannel().getId(),
                 event.getMessageId(),

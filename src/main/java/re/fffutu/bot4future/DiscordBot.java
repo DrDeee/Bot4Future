@@ -6,10 +6,19 @@ import org.simpleyaml.configuration.Configuration;
 import org.simpleyaml.configuration.file.YamlFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import re.fffutu.bot4future.db.ChannelType;
 import re.fffutu.bot4future.db.Database;
 import re.fffutu.bot4future.logging.EventLogListener;
+import re.fffutu.bot4future.logging.MessageDetails;
+
+import javax.xml.crypto.Data;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class DiscordBot {
+    public static final ScheduledExecutorService POOL = Executors.newScheduledThreadPool(5);
+
+
     public static DiscordBot INSTANCE;
     public DiscordApi api;
     public Configuration config;
@@ -61,11 +70,18 @@ public class DiscordBot {
         builder.setToken(config.getString("token"));
         builder.setAllIntents();
 
+        logger.info("Anmelden bei Discord..");
         builder.login().thenAccept(discordApi -> {
             this.api = discordApi;
             logger.info("Discord Bot Online");
 
             api.addListener(new EventLogListener());
+            api.addListener(new MessageDetails());
+            api.addMessageCreateListener(e -> {
+                if(e.getMessageContent().equals("-here")){
+                    Database.setChannel(e.getServer().get().getId(), e.getChannel().getId(), ChannelType.EVENT_AUDIT);
+                }
+            });
         });
     }
 }
