@@ -2,8 +2,6 @@ package re.fffutu.bot4future.logging;
 
 import org.javacord.api.entity.message.MessageAuthor;
 import org.javacord.api.entity.message.MessageBuilder;
-import org.javacord.api.entity.message.component.ButtonBuilder;
-import org.javacord.api.entity.message.component.ButtonStyle;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.event.message.MessageDeleteEvent;
@@ -21,6 +19,8 @@ import re.fffutu.bot4future.db.Database;
 
 import java.awt.*;
 import java.time.Instant;
+
+import static re.fffutu.bot4future.logging.EventAuditLogButtonTemplates.*;
 
 public class EventLogListener implements UserRoleAddListener,
         UserRoleRemoveListener,
@@ -62,21 +62,9 @@ public class EventLogListener implements UserRoleAddListener,
                     DiscordBot.INSTANCE.api.getTextChannelById(id).ifPresent(channel -> {
                         MessageBuilder builder = new MessageBuilder();
                         builder.addActionRow(
-                                new ButtonBuilder()
-                                        .setLabel("Zur Nachricht")
-                                        .setUrl(event.getMessageLink().get().toString())
-                                        .setStyle(ButtonStyle.LINK)
-                                        .build(),
-                                new ButtonBuilder()
-                                        .setLabel("Details")
-                                        .setCustomId("msg-details:" + author.getId())
-                                        .setStyle(ButtonStyle.PRIMARY)
-                                        .build(),
-                                new ButtonBuilder()
-                                        .setLabel("Löschen")
-                                        .setCustomId("msg-delete:" + channelId + ":" + event.getMessageId())
-                                        .setStyle(ButtonStyle.DANGER)
-                                        .build()
+                                MESSAGE_LINK(event.getMessageLink().get().toString()),
+                                DETAILS(channelId, event.getMessageId()),
+                                DELETE(channelId, event.getMessageId())
                         );
                         builder.addEmbed(new EmbedBuilder()
                                 .setTimestamp(Instant.now())
@@ -115,16 +103,13 @@ public class EventLogListener implements UserRoleAddListener,
             if (msgContentRaw == null) msgContentRaw = "`unknown message`";
             String msgContent = msgContentRaw;
             MessageAuthor author = event.getMessageAuthor().get();
+            store.saveMessage(" ", guildId, channelId, event.getMessageId(), author.getId());
 
             Database.getChannel(guildId, ChannelType.EVENT_AUDIT).thenAccept(auditOpt -> {
                 auditOpt.ifPresent(id -> {
                     DiscordBot.INSTANCE.api.getTextChannelById(id).ifPresent(channel -> {
                         MessageBuilder builder = new MessageBuilder();
-                        builder.addActionRow(new ButtonBuilder()
-                                .setCustomId("msg-details:" + author.getId())
-                                .setStyle(ButtonStyle.PRIMARY)
-                                .setLabel("Details")
-                                .build());
+                        builder.addActionRow(DETAILS(channelId, event.getMessageId()));
                         builder.addEmbed(new EmbedBuilder()
                                 .setTitle("Nachricht gelöscht")
                                 .setTimestamp(Instant.now())

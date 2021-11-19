@@ -3,12 +3,10 @@ package re.fffutu.bot4future;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 
 import java.awt.*;
-import java.time.Instant;
 
 public class EmbedTemplate {
     private static EmbedBuilder main() {
-        return new EmbedBuilder()
-                .setTimestamp(Instant.now());
+        return new EmbedBuilder();
     }
 
     public static EmbedBuilder info() {

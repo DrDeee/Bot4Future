@@ -60,7 +60,7 @@ public class MessageStore {
 
     private void addMessage(byte[] encrypted, long messageId) {
         Jedis jedis = Database.create();
-        jedis.lpush("message:" + messageId, Base64.getEncoder().encodeToString(encrypted));
+        jedis.rpush("message:" + messageId, Base64.getEncoder().encodeToString(encrypted));
         Database.close(jedis);
     }
 

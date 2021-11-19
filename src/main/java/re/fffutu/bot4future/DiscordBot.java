@@ -9,9 +9,9 @@ import org.slf4j.LoggerFactory;
 import re.fffutu.bot4future.db.ChannelType;
 import re.fffutu.bot4future.db.Database;
 import re.fffutu.bot4future.logging.EventLogListener;
-import re.fffutu.bot4future.logging.MessageDetails;
+import re.fffutu.bot4future.logging.actions.MessageDeleteActionListener;
+import re.fffutu.bot4future.logging.actions.MessageDetailsActionListener;
 
-import javax.xml.crypto.Data;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -75,8 +75,13 @@ public class DiscordBot {
             this.api = discordApi;
             logger.info("Discord Bot Online");
 
+            //ADD LISTENERS
+
+            // logging
             api.addListener(new EventLogListener());
-            api.addListener(new MessageDetails());
+            api.addListener(new MessageDeleteActionListener());
+            api.addListener(new MessageDetailsActionListener());
+
             api.addMessageCreateListener(e -> {
                 if(e.getMessageContent().equals("-here")){
                     Database.setChannel(e.getServer().get().getId(), e.getChannel().getId(), ChannelType.EVENT_AUDIT);
