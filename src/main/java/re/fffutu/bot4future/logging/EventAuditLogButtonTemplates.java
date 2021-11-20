@@ -103,4 +103,20 @@ public class EventAuditLogButtonTemplates {
                 .setCustomId("ignorethis")
                 .build();
     }
+
+    public static Button DETAILS_YES() {
+        return new ButtonBuilder()
+                .setLabel("Ja")
+                .setStyle(ButtonStyle.SUCCESS)
+                .setCustomId("msg-details:yes")
+                .build();
+    }
+
+    public static Button DETAILS_NO() {
+        return new ButtonBuilder()
+                .setLabel("Nein")
+                .setStyle(ButtonStyle.DANGER)
+                .setCustomId("msg-details:no")
+                .build();
+    }
 }
