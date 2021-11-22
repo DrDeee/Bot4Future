@@ -6,9 +6,11 @@ import org.simpleyaml.configuration.Configuration;
 import org.simpleyaml.configuration.file.YamlFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import re.fffutu.bot4future.db.ChannelStore;
 import re.fffutu.bot4future.db.ChannelType;
 import re.fffutu.bot4future.db.Database;
-import re.fffutu.bot4future.logging.EventLogListener;
+import re.fffutu.bot4future.logging.EventAuditListener;
+import re.fffutu.bot4future.logging.UserLogListener;
 import re.fffutu.bot4future.logging.actions.MessageDeleteActionListener;
 import re.fffutu.bot4future.logging.actions.MessageDetailsActionListener;
 
@@ -78,13 +80,21 @@ public class DiscordBot {
             //ADD LISTENERS
 
             // logging
-            api.addListener(new EventLogListener());
+            api.addListener(new EventAuditListener());
             api.addListener(new MessageDeleteActionListener());
             api.addListener(new MessageDetailsActionListener());
 
+            api.addListener(new UserLogListener());
+
             api.addMessageCreateListener(e -> {
-                if(e.getMessageContent().equals("-here")){
-                    Database.setChannel(e.getServer().get().getId(), e.getChannel().getId(), ChannelType.EVENT_AUDIT);
+                if (e.getMessageContent().equals("-here")) {
+                    ChannelStore.setChannel(e.getServer().get().getId(), e.getChannel().getId(), ChannelType.EVENT_AUDIT);
+                }
+                if (e.getMessageContent().equals("-here2")) {
+                    ChannelStore.setChannel(e.getServer().get().getId(), e.getChannel().getId(), ChannelType.STORE);
+                }
+                if (e.getMessageContent().equals("-here3")) {
+                    ChannelStore.setChannel(e.getServer().get().getId(), e.getChannel().getId(), ChannelType.USER_LOG);
                 }
             });
         });

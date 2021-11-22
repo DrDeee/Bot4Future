@@ -5,8 +5,6 @@ import org.slf4j.LoggerFactory;
 import re.fffutu.bot4future.DiscordBot;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -22,24 +20,6 @@ public class Database {
             close(jedis);
             logger.debug("Database saved.");
         }, 10, 30, TimeUnit.SECONDS);
-    }
-
-    public static CompletableFuture<Optional<Long>> getChannel(long guildId, ChannelType type) {
-        return CompletableFuture.supplyAsync(() -> {
-            Jedis jedis = create();
-            String id = jedis.get("channel:" + guildId + ":" + type);
-            close(jedis);
-            if (id == null) return Optional.empty();
-            return Optional.of(Long.parseLong(id));
-        });
-    }
-
-    public static CompletableFuture setChannel(long guildId, long channelId, ChannelType type) {
-        return CompletableFuture.runAsync(() -> {
-            Jedis jedis = create();
-            jedis.set("channel:" + guildId + ":" + type, channelId + "");
-            close(jedis);
-        });
     }
 
     public static Jedis create() {

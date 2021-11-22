@@ -1,5 +1,6 @@
 package re.fffutu.bot4future.logging.actions;
 
+import com.google.gson.Gson;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
@@ -12,7 +13,9 @@ import org.javacord.api.interaction.ButtonInteraction;
 import org.javacord.api.interaction.callback.InteractionCallbackDataFlag;
 import org.javacord.api.listener.interaction.ButtonClickListener;
 import org.javacord.api.util.logging.ExceptionLogger;
+import re.fffutu.bot4future.DiscordBot;
 import re.fffutu.bot4future.EmbedTemplate;
+import re.fffutu.bot4future.logging.MessageData;
 import re.fffutu.bot4future.logging.MessageStore;
 
 import java.util.List;
@@ -36,7 +39,7 @@ public class MessageDetailsActionListener implements ButtonClickListener {
                 long channelId = Long.parseLong(parts[2]);
                 long msgId = Long.parseLong(parts[3]);
                 interaction.getUser().openPrivateChannel().thenAccept(channel -> {
-                    List<String> msgs = store.getMessageVersions(interaction.getServer().get().getId(),
+                    List<MessageData> msgs = store.getMessageVersions(interaction.getServer().get().getId(),
                                     channelId, msgId)
                             .join();
                     Server server = interaction.getServer().get();
@@ -58,7 +61,7 @@ public class MessageDetailsActionListener implements ButtonClickListener {
                 MessageUpdater updater = new MessageUpdater(interaction.getMessage());
                 DetailsData data = DetailsData.fromMessage(interaction.getMessage());
 
-                List<String> msgs = store.getMessageVersions(data.serverId,
+                List<MessageData> msgs = store.getMessageVersions(data.serverId,
                                 data.channelId, data.msgId)
                         .join();
                 updater.removeAllEmbeds();
@@ -76,7 +79,7 @@ public class MessageDetailsActionListener implements ButtonClickListener {
                 event.getButtonInteraction().createImmediateResponder().respond();
                 MessageUpdater updater = new MessageUpdater(interaction.getMessage());
                 DetailsData data = DetailsData.fromMessage(interaction.getMessage());
-                List<String> msgs = store.getMessageVersions(data.serverId,
+                List<MessageData> msgs = store.getMessageVersions(data.serverId,
                                 data.channelId, data.msgId)
                         .join();
                 updater.removeAllEmbeds();
@@ -95,7 +98,7 @@ public class MessageDetailsActionListener implements ButtonClickListener {
                 event.getButtonInteraction().createImmediateResponder().respond();
                 MessageUpdater updater = new MessageUpdater(interaction.getMessage());
                 DetailsData data = DetailsData.fromMessage(interaction.getMessage());
-                List<String> msgs = store.getMessageVersions(data.serverId, data.channelId, data.msgId).join();
+                List<MessageData> msgs = store.getMessageVersions(data.serverId, data.channelId, data.msgId).join();
                 updater.addEmbed(createMessage(data.msgId, data.serverName, data.serverId, msgs, data.version)
                         .addField("Bestätigung", "Möchtest du diese Nachricht wirklich löschen?"));
                 updater.addActionRow(DETAILS_YES(), DETAILS_NO());
@@ -115,73 +118,78 @@ public class MessageDetailsActionListener implements ButtonClickListener {
         }
     }
 
-    private EmbedBuilder createMessage(long msgId, String guildName, long serverId, List<String> msgs, int currentVersion) {
-        String msg = msgs.get(currentVersion);
+    private EmbedBuilder createMessage(long msgId, String guildName, long serverId, List<MessageData> msgs, int currentVersion) {
+        MessageData msg = msgs.get(currentVersion);
         EmbedBuilder builder = EmbedTemplate.info()
                 .setTitle("Nachrichten-Details")
                 .addField("Server", guildName)
-                .addInlineField("Author", "<@" + getAuthorId(msg) + "> (" + getAuthorId(msg) + ")")
+                .addInlineField("Author", "<@" + msg.userId + "> (" + msg.userId + ")")
                 .addInlineField("Message-ID", msgId + "")
-                .addInlineField("Channel-ID", getChannelId(msg) + "")
+                .addInlineField("Channel-ID", msg.channelId + "")
                 .addInlineField("Server-ID", serverId + "")
-                .addInlineField(currentVersion == 0 ? "Erstellt" : (getMessage(msg).equals(" ")
-                        ? "Gelöscht" : "Geupdatet"), "<t:" + getTimestamp(msg) + ">");
-        if (!getMessage(msg).equals(" "))
-            builder.addField("Inhalt", getMessage(msg));
+                .addInlineField(currentVersion == 0 ? "Erstellt" : (isDeleted(msg)
+                        ? "Gelöscht" : "Geupdatet"), "<t:" + msg.timeStamp + ">");
+        if (!isDeleted(msg))
+            builder.addField("Inhalt", msg.content.equals("") ? "*Kein Inhalt*" : msg.content);
+        if (msg.files.size() != 0) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 1; i < msg.files.size() + 1; i++) {
+                sb.append("[Anhang " + i + "](" + msg.files.get(i - 1) + ")\n");
+            }
+            builder.addField("Anhänge", sb.toString());
+        }
         builder.addField("Stand", "<t:"
                         + TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()) + ":R>")
                 .setFooter("Version " + (currentVersion + 1) + "/" + msgs.size());
+        if (msg.content.equals("")) builder.addField("Hinweis", "Diese Version hat keinen Text");
         return builder;
     }
 
-    private EmbedBuilder createMessage(long msgId, String guildName, long serverId, List<String> msgs) {
+    private EmbedBuilder createMessage(long msgId, String guildName, long serverId, List<MessageData> msgs) {
         return createMessage(msgId, guildName, serverId, msgs, msgs.size() - 1);
     }
 
-    private long getAuthorId(String msg) {
-        return Long.parseLong(msg.substring(0, 22));
+    private boolean isDeleted(List<MessageData> msgs) {
+        return msgs.get(msgs.size() - 1).deleted;
     }
 
-    private long getChannelId(String msg) {
-        return Long.parseLong(msg.substring(22, 44));
-    }
-
-    private long getTimestamp(String msg) {
-        return TimeUnit.MILLISECONDS.toSeconds(Long.parseLong(msg.substring(44, 66)));
-    }
-
-    private String getMessage(String msg) {
-        return msg.substring(66);
-    }
-
-    private boolean isDeleted(List<String> msgs) {
-        return getMessage(msgs.get(msgs.size() - 1)).equals(" ");
+    private boolean isDeleted(MessageData msg) {
+        return msg.deleted;
     }
 
     private void handleConfirmationResponse(ButtonInteraction interaction, boolean confirmed) {
+        boolean responded = false;
         DetailsData data = DetailsData.fromMessage(interaction.getMessage());
         if (confirmed) {
             Optional<TextChannel> optChannel = interaction.getApi().getTextChannelById(data.channelId);
             if (optChannel.isPresent()) {
                 Message msg = optChannel.get().getMessageById(data.msgId).join();
-                if (msg.canDelete(interaction.getUser())) msg.delete();
-                else
+                if (msg.canDelete(interaction.getUser())) {
+                    msg.delete().join();
+                } else {
                     interaction.createImmediateResponder()
                             .addEmbed(EmbedTemplate.error()
                                     .setDescription("Du musst die Nachricht auch per Hand " +
                                             "löschen können, um sie mit dem Bot zu löschen."))
                             .setFlags(InteractionCallbackDataFlag.EPHEMERAL)
                             .respond();
+                    responded = true;
+                }
 
             }
         }
         MessageUpdater updater = new MessageUpdater(interaction.getMessage());
-        List<String> msgs = store.getMessageVersions(data.serverId, data.channelId, data.msgId).join();
-        updater.addEmbed(createMessage(data.msgId, data.serverName, data.serverId, msgs));
-        updater.addActionRow(data.version == 0 ? BACK_DISABLED() : BACK(),
-                isDeleted(msgs) ? MESSAGE_LINK_DISABLED() : MESSAGE_LINK("https://discord.com/channels/"
-                        + data.serverId + "/" + data.channelId + "/" + data.msgId),
-                isDeleted(msgs) ? DETAILS_DELETE_DISABLED() : DETAILS_DELETE(), NEXT_DISABLED());
-        updater.replaceMessage();
+        boolean finalResponded = responded;
+        DiscordBot.POOL.schedule(() -> {
+            List<MessageData> msgs = store.getMessageVersions(data.serverId, data.channelId, data.msgId).join();
+            updater.addEmbed(createMessage(data.msgId, data.serverName, data.serverId, msgs));
+            updater.addActionRow(data.version == 0 ? BACK_DISABLED() : BACK(),
+                    isDeleted(msgs) ? MESSAGE_LINK_DISABLED() : MESSAGE_LINK("https://discord.com/channels/"
+                            + data.serverId + "/" + data.channelId + "/" + data.msgId),
+                    isDeleted(msgs) ? DETAILS_DELETE_DISABLED() : DETAILS_DELETE(), NEXT_DISABLED());
+            updater.replaceMessage().thenAccept(m -> {
+                if(!finalResponded) interaction.createImmediateResponder().respond();
+            });
+        }, 300, TimeUnit.MILLISECONDS);
     }
 }
