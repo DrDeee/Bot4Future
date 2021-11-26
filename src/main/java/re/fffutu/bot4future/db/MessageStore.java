@@ -1,7 +1,8 @@
-package re.fffutu.bot4future.logging;
+package re.fffutu.bot4future.db;
 
 import com.google.gson.Gson;
 import re.fffutu.bot4future.db.Database;
+import re.fffutu.bot4future.logging.MessageData;
 import re.fffutu.bot4future.util.Crypto;
 import re.fffutu.bot4future.util.StringUtil;
 import redis.clients.jedis.Jedis;

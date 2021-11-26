@@ -20,7 +20,8 @@ import org.javacord.api.util.logging.ExceptionLogger;
 import re.fffutu.bot4future.DiscordBot;
 import re.fffutu.bot4future.EmbedTemplate;
 import re.fffutu.bot4future.db.ChannelStore;
-import re.fffutu.bot4future.db.ChannelType;
+import re.fffutu.bot4future.db.ChannelStore.ChannelType;
+import re.fffutu.bot4future.db.MessageStore;
 
 import java.awt.*;
 import java.net.URL;
@@ -59,18 +60,17 @@ public class EventAuditListener implements UserRoleAddListener,
         long guildId = event.getServer().get().getId();
         long channelId = event.getChannel().getId();
 
+        Message msg = event.requestMessage().join();
+        String newText = msg.getContent();
+
         //TODO IGNORED CHANNELS
         store.getMessage(guildId, channelId, event.getMessageId()).thenAccept(msgData -> {
             String oldText;
             if (msgData == null) return;
             else oldText = msgData.content;
 
-            Message msg = event.requestMessage().join();
-            String newText = msg.getContent();
-
             MessageAuthor author = event.getMessageAuthor().get();
-            ChannelStore.getChannel(guildId, ChannelType.EVENT_AUDIT).thenAccept(auditOpt -> {
-                auditOpt.ifPresent(id -> {
+            ChannelStore.getChannel(guildId, ChannelType.EVENT_AUDIT).ifPresent(id ->
                     DiscordBot.INSTANCE.api.getTextChannelById(id).ifPresent(channel -> {
                         MessageBuilder builder = new MessageBuilder();
                         builder.addActionRow(
@@ -101,17 +101,13 @@ public class EventAuditListener implements UserRoleAddListener,
                                         ? "nur Anhänge" : (files.size() == 0 ? "nur Text" : "Text und Anhänge")) + ".");
                         builder.addEmbed(embedBuilder);
                         builder.send(channel);
-                    });
-                });
-            });
-
-            //update encrypted message in database
-            long messageId = event.getMessageId();
-            long userId = author.getId();
-
-            store.updateMessage(newText, guildId, channelId, messageId, userId,
-                    storeFilesFromMessage(event.getMessage().get()));
+                    }));
         });
+        //update encrypted message in database
+        long messageId = event.getMessageId();
+        long userId = msg.getAuthor().getId();
+        store.updateMessage(newText, guildId, channelId, messageId, userId,
+                storeFilesFromMessage(event.getMessage().get()));
     }
 
     @Override
@@ -130,8 +126,7 @@ public class EventAuditListener implements UserRoleAddListener,
             MessageAuthor author = event.getMessageAuthor().get();
             store.saveMessage(null, guildId, channelId, event.getMessageId(), author.getId(), new ArrayList<>());
 
-            ChannelStore.getChannel(guildId, ChannelType.EVENT_AUDIT).thenAccept(auditOpt -> {
-                auditOpt.ifPresent(id -> {
+            ChannelStore.getChannel(guildId, ChannelType.EVENT_AUDIT).ifPresent(id ->
                     DiscordBot.INSTANCE.api.getTextChannelById(id).ifPresent(channel -> {
                         MessageBuilder builder = new MessageBuilder();
                         builder.addActionRow(DETAILS(channelId, event.getMessageId()));
@@ -150,9 +145,7 @@ public class EventAuditListener implements UserRoleAddListener,
                         if (msgContent.equals("")) eBuilder.addField("Hinweis", "Diese Nachricht hatte nur Text.");
                         builder.addEmbed(eBuilder);
                         builder.send(channel);
-                    });
-                });
-            });
+                    }));
         });
     }
 
@@ -170,35 +163,32 @@ public class EventAuditListener implements UserRoleAddListener,
             long serverId = event.getServer().get().getId();
             long channelId = event.getChannel().getId();
             MessageAuthor author = event.getMessageAuthor();
-            ChannelStore.getChannel(serverId, ChannelType.EVENT_AUDIT).thenAccept(auditOpt -> {
-                auditOpt.ifPresent(id -> {
-                    System.out.println("---");
-                    DiscordBot.INSTANCE.api.getTextChannelById(id).ifPresent(channel -> {
-                        String content = event.getMessageContent();
-                        try {
-                            MessageBuilder builder = new MessageBuilder();
-                            builder.addActionRow(DETAILS(channelId, event.getMessageId()));
-                            EmbedBuilder embedBuilder = new EmbedBuilder()
-                                    .setTimestamp(Instant.now())
-                                    .setColor(Color.GREEN)
-                                    .setTitle("Nachricht mit Anhang gesendet")
-                                    .setFooter(author.getDisplayName() + " (" + author.getId() + ")",
-                                            author.getAvatar())
-                                    .addField("Channel", "<#" + event.getChannel().getId() + ">", true)
-                                    .addField("User", "<@" + author.getId() + ">", true)
+            ChannelStore.getChannel(serverId, ChannelType.EVENT_AUDIT).ifPresent(id -> {
+                DiscordBot.INSTANCE.api.getTextChannelById(id).ifPresent(channel -> {
+                    String content = event.getMessageContent();
+                    try {
+                        MessageBuilder builder = new MessageBuilder();
+                        builder.addActionRow(DETAILS(channelId, event.getMessageId()));
+                        EmbedBuilder embedBuilder = new EmbedBuilder()
+                                .setTimestamp(Instant.now())
+                                .setColor(Color.GREEN)
+                                .setTitle("Nachricht mit Anhang gesendet")
+                                .setFooter(author.getDisplayName() + " (" + author.getId() + ")",
+                                        author.getAvatar())
+                                .addField("Channel", "<#" + event.getChannel().getId() + ">", true)
+                                .addField("User", "<@" + author.getId() + ">", true)
 
-                                    .addField("Inhalt", content.equals("") ? "*Kein Inhalt*" : content)
-                                    .addField("Anhänge",
-                                            formatAttachments(getFilesFromMessage(event.getMessage())))
-                                    .addField("Message ID: ", event.getMessageId() + "", false);
-                            if (content.equals(""))
-                                embedBuilder.addField("Hinweis", "Diese Nachricht hat keinen Text.");
-                            builder.addEmbed(embedBuilder);
-                            builder.send(channel).exceptionally(ExceptionLogger.get());
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    });
+                                .addField("Inhalt", content.equals("") ? "*Kein Inhalt*" : content)
+                                .addField("Anhänge",
+                                        formatAttachments(getFilesFromMessage(event.getMessage())))
+                                .addField("Message ID: ", event.getMessageId() + "", false);
+                        if (content.equals(""))
+                            embedBuilder.addField("Hinweis", "Diese Nachricht hat keinen Text.");
+                        builder.addEmbed(embedBuilder);
+                        builder.send(channel).exceptionally(ExceptionLogger.get());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 });
             });
         }
@@ -210,8 +200,8 @@ public class EventAuditListener implements UserRoleAddListener,
     }
 
     private List<String> storeFilesFromMessage(Message msg) {
-        if(msg.getAttachments().size() == 0) return new ArrayList<>();
-        Optional<Long> storeOpt = ChannelStore.getChannel(msg.getServer().get().getId(), ChannelType.STORE).join();
+        if (msg.getAttachments().size() == 0) return new ArrayList<>();
+        Optional<Long> storeOpt = ChannelStore.getChannel(msg.getServer().get().getId(), ChannelType.STORE);
         if (storeOpt.isPresent()) {
             Optional<TextChannel> channelOpt = DiscordBot.INSTANCE.api.getTextChannelById(storeOpt.get());
             if (channelOpt.isPresent()) {

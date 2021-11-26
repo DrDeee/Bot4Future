@@ -1,7 +1,5 @@
 package re.fffutu.bot4future.logging.actions;
 
-import com.google.gson.Gson;
-import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
@@ -16,7 +14,7 @@ import org.javacord.api.util.logging.ExceptionLogger;
 import re.fffutu.bot4future.DiscordBot;
 import re.fffutu.bot4future.EmbedTemplate;
 import re.fffutu.bot4future.logging.MessageData;
-import re.fffutu.bot4future.logging.MessageStore;
+import re.fffutu.bot4future.db.MessageStore;
 
 import java.util.List;
 import java.util.Optional;
