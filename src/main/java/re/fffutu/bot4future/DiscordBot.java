@@ -16,7 +16,6 @@ import re.fffutu.bot4future.logging.actions.MessageDeleteActionListener;
 import re.fffutu.bot4future.logging.actions.MessageDetailsActionListener;
 import re.fffutu.bot4future.moderation.BanCommand;
 import re.fffutu.bot4future.util.CommandManager;
-import redis.clients.jedis.Jedis;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -105,7 +104,7 @@ public class DiscordBot {
 
             api.addMessageCreateListener(e -> {
                 if (e.getMessageContent().equals("-here")) {
-                    ChannelStore.setChannel(e.getServer().get().getId(), e.getChannel().getId(), ChannelStore.ChannelType.EVENT_AUDIT);
+                    ChannelStore.setChannel(e.getServer().get().getId(), e.getChannel().getId(), ChannelStore.ChannelType.MESSAGE_LOG);
                 }
                 if (e.getMessageContent().equals("-here2")) {
                     ChannelStore.setChannel(e.getServer().get().getId(), e.getChannel().getId(), ChannelStore.ChannelType.STORE);

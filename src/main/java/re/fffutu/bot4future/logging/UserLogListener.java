@@ -21,62 +21,58 @@ import java.util.Optional;
 public class UserLogListener implements ServerMemberJoinListener, ServerMemberLeaveListener {
     @Override
     public void onServerMemberJoin(ServerMemberJoinEvent event) {
-        ChannelStore.getChannel(event.getServer().getId(), ChannelStore.ChannelType.USER_LOG).ifPresent(id -> {
+        ChannelStore.getChannel(event.getServer().getId(), ChannelStore.ChannelType.USER_LOG).ifPresent(channel -> {
             User user = event.getUser();
             UserStore.setJoinedTimestamp(event.getServer().getId(), user.getId(), Instant.now());
-            DiscordBot.INSTANCE.api.getServerTextChannelById(id).ifPresent(channel -> {
-                MessageBuilder builder = new MessageBuilder()
-                        .addEmbed(EmbedTemplate.base()
-                                .setTitle("User gejoint")
-                                .setColor(Color.GREEN)
-                                .setThumbnail(user.getAvatar())
-                                .addField("Name", user.getDiscriminatedName(), true)
-                                .addField("Anzeige-Name", user.getDisplayName(event.getServer()), true)
-                                .addField("ID", user.getId() + "", false)
-                                .addField("Erstellt",
-                                        "<t:" + user.getCreationTimestamp().getEpochSecond() + ":R>")
-                        )
-                        .addActionRow(new ButtonBuilder()
-                                .setCustomId("user-details:" + user.getId())
-                                .setStyle(ButtonStyle.PRIMARY)
-                                .setLabel("Details")
-                                .build());
-                builder.send(channel);
-            });
+
+            MessageBuilder builder = new MessageBuilder()
+                    .addEmbed(EmbedTemplate.base()
+                            .setTitle("User gejoint")
+                            .setColor(Color.GREEN)
+                            .setThumbnail(user.getAvatar())
+                            .addField("Name", user.getDiscriminatedName(), true)
+                            .addField("Anzeige-Name", user.getDisplayName(event.getServer()), true)
+                            .addField("ID", user.getId() + "", false)
+                            .addField("Erstellt",
+                                    "<t:" + user.getCreationTimestamp().getEpochSecond() + ":R>")
+                    )
+                    .addActionRow(new ButtonBuilder()
+                            .setCustomId("user-details:" + user.getId())
+                            .setStyle(ButtonStyle.PRIMARY)
+                            .setLabel("Details")
+                            .build());
+            builder.send(channel.asTextChannel().get());
         });
     }
 
     @Override
     public void onServerMemberLeave(ServerMemberLeaveEvent event) {
-        ChannelStore.getChannel(event.getServer().getId(), ChannelStore.ChannelType.USER_LOG).ifPresent(id -> {
+        ChannelStore.getChannel(event.getServer().getId(), ChannelStore.ChannelType.USER_LOG).ifPresent(channel -> {
             User user = event.getUser();
-            DiscordBot.INSTANCE.api.getServerTextChannelById(id).ifPresent(channel -> {
-                MessageBuilder builder = new MessageBuilder();
-                EmbedBuilder embedBuilder = EmbedTemplate.base()
-                        .setTitle("User geleavt")
-                        .setColor(Color.RED)
-                        .setThumbnail(user.getAvatar())
-                        .addField("Name", user.getDiscriminatedName(), true)
-                        .addField("Anzeige-Name", user.getDisplayName(event.getServer()), true)
-                        .addField("ID", user.getId() + "", false)
-                        .addField("Erstellt",
-                                "<t:" + user.getCreationTimestamp().getEpochSecond() + ":R>");
-                Optional<Instant> optionalInstant = UserStore.getJoinedTimestamp(event.getServer().getId(),
-                        user.getId()).join();
-                UserStore.deleteJoinedTimestamp(event.getServer().getId(), user.getId());
-                if (optionalInstant.isPresent()) {
-                    embedBuilder.addField("Gejoint",
-                            "<t:" + optionalInstant.get().getEpochSecond() + ":R>");
-                }
-                builder.addEmbed(embedBuilder)
-                        .addActionRow(new ButtonBuilder()
-                                .setCustomId("user-details:" + user.getId())
-                                .setStyle(ButtonStyle.PRIMARY)
-                                .setLabel("Details")
-                                .build());
-                builder.send(channel);
-            });
-
+            MessageBuilder builder = new MessageBuilder();
+            EmbedBuilder embedBuilder = EmbedTemplate.base()
+                    .setTitle("User geleavt")
+                    .setColor(Color.RED)
+                    .setThumbnail(user.getAvatar())
+                    .addField("Name", user.getDiscriminatedName(), true)
+                    .addField("Anzeige-Name", user.getDisplayName(event.getServer()), true)
+                    .addField("ID", user.getId() + "", false)
+                    .addField("Erstellt",
+                            "<t:" + user.getCreationTimestamp().getEpochSecond() + ":R>");
+            Optional<Instant> optionalInstant = UserStore.getJoinedTimestamp(event.getServer().getId(),
+                    user.getId()).join();
+            UserStore.deleteJoinedTimestamp(event.getServer().getId(), user.getId());
+            if (optionalInstant.isPresent()) {
+                embedBuilder.addField("Gejoint",
+                        "<t:" + optionalInstant.get().getEpochSecond() + ":R>");
+            }
+            builder.addEmbed(embedBuilder)
+                    .addActionRow(new ButtonBuilder()
+                            .setCustomId("user-details:" + user.getId())
+                            .setStyle(ButtonStyle.PRIMARY)
+                            .setLabel("Details")
+                            .build());
+            builder.send(channel.asTextChannel().get());
         });
     }
 }

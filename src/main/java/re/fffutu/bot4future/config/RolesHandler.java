@@ -1,14 +1,11 @@
 package re.fffutu.bot4future.config;
 
 import org.javacord.api.entity.permission.Role;
-import org.javacord.api.event.interaction.SlashCommandCreateEvent;
-import org.javacord.api.interaction.SlashCommandInteraction;
-import org.javacord.api.interaction.SlashCommandInteractionOption;
+import org.javacord.api.interaction.*;
 import org.javacord.api.interaction.callback.InteractionCallbackDataFlag;
 import org.javacord.api.interaction.callback.InteractionImmediateResponseBuilder;
 import re.fffutu.bot4future.EmbedTemplate;
 import re.fffutu.bot4future.db.RoleStore;
-import re.fffutu.bot4future.util.CommandManager;
 import re.fffutu.bot4future.util.SubcommandHandler;
 
 import java.awt.*;
@@ -17,6 +14,37 @@ import java.util.Optional;
 
 public class RolesHandler implements SubcommandHandler {
     private RoleStore store = new RoleStore();
+
+    private static SlashCommandOption ROLE = SlashCommandOption.create(SlashCommandOptionType.ROLE,
+            "rolle",
+            "Die neue Rolle.",
+            false);
+
+    public static SlashCommandOption getSubcommand() {
+        return new SlashCommandOptionBuilder()
+                .setType(SlashCommandOptionType.SUB_COMMAND_GROUP)
+                .setName("roles")
+                .setDescription("Verwalte die Rollen für diesen Server.")
+                .addOption(new SlashCommandOptionBuilder()
+                        .setName("admin")
+                        .setDescription("Setze die Admin-Rolle, oder lasse sie dir anzeigen.")
+                        .setType(SlashCommandOptionType.SUB_COMMAND)
+                        .addOption(ROLE)
+                        .build())
+                .addOption(new SlashCommandOptionBuilder()
+                        .setName("moderator")
+                        .setDescription("Setze die Moderator-Rolle, oder lasse sie dir anzeigen.")
+                        .setType(SlashCommandOptionType.SUB_COMMAND)
+                        .addOption(ROLE)
+                        .build())
+                .addOption(new SlashCommandOptionBuilder()
+                        .setName("muted")
+                        .setDescription("Setze die Mute-Rolle, oder lasse sie dir anzeigen.")
+                        .setType(SlashCommandOptionType.SUB_COMMAND)
+                        .addOption(ROLE)
+                        .build())
+                .build();
+    }
 
     @Override
     public void handle(List<SlashCommandInteractionOption> options, SlashCommandInteraction interaction) {

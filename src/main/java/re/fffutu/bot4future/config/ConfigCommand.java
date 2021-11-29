@@ -12,6 +12,7 @@ public class ConfigCommand implements CommandManager.Command {
 
     public ConfigCommand() {
         subcommandManager.addHandler("roles", new RolesHandler());
+        subcommandManager.addHandler("channels", new ChannelHandler());
     }
 
     @Override
@@ -19,38 +20,8 @@ public class ConfigCommand implements CommandManager.Command {
         return new SlashCommandBuilder()
                 .setName("config")
                 .setDescription("Verwalte die Einstellungen des Bots für diesen Server.")
-                .addOption(new SlashCommandOptionBuilder()
-                        .setType(SlashCommandOptionType.SUB_COMMAND_GROUP)
-                        .setName("roles")
-                        .setDescription("Verwalte die Rollen für diesen Server.")
-                        .addOption(new SlashCommandOptionBuilder()
-                                .setName("admin")
-                                .setDescription("Setze die Admin-Rolle, oder lasse sie dir anzeigen.")
-                                .setType(SlashCommandOptionType.SUB_COMMAND)
-                                .addOption(SlashCommandOption.create(SlashCommandOptionType.ROLE,
-                                        "rolle",
-                                        "Die neue Admin-Rolle.",
-                                        false))
-                                .build())
-                        .addOption(new SlashCommandOptionBuilder()
-                                .setName("moderator")
-                                .setDescription("Setze die Moderator-Rolle, oder lasse sie dir anzeigen.")
-                                .setType(SlashCommandOptionType.SUB_COMMAND)
-                                .addOption(SlashCommandOption.create(SlashCommandOptionType.ROLE,
-                                        "rolle",
-                                        "Die neue Moderator-Rolle.",
-                                        false))
-                                .build())
-                        .addOption(new SlashCommandOptionBuilder()
-                                .setName("muted")
-                                .setDescription("Setze die Mute-Rolle, oder lasse sie dir anzeigen.")
-                                .setType(SlashCommandOptionType.SUB_COMMAND)
-                                .addOption(SlashCommandOption.create(SlashCommandOptionType.ROLE,
-                                        "rolle",
-                                        "Die neue Mute-Rolle.",
-                                        false))
-                                .build())
-                        .build());
+                .addOption(RolesHandler.getSubcommand())
+                .addOption(ChannelHandler.getSubcommand());
     }
 
     @Override

@@ -1,5 +1,6 @@
 package re.fffutu.bot4future.logging;
 
+import org.javacord.api.entity.channel.ServerChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageAttachment;
@@ -70,38 +71,37 @@ public class EventAuditListener implements UserRoleAddListener,
             else oldText = msgData.content;
 
             MessageAuthor author = event.getMessageAuthor().get();
-            ChannelStore.getChannel(guildId, ChannelType.EVENT_AUDIT).ifPresent(id ->
-                    DiscordBot.INSTANCE.api.getTextChannelById(id).ifPresent(channel -> {
-                        MessageBuilder builder = new MessageBuilder();
-                        builder.addActionRow(
-                                MESSAGE_LINK(event.getMessageLink().get().toString()),
-                                DETAILS(channelId, event.getMessageId()),
-                                DELETE(channelId, event.getMessageId())
-                        );
-                        EmbedBuilder embedBuilder = new EmbedBuilder()
-                                .setTimestamp(Instant.now())
-                                .setColor(Color.BLUE)
-                                .setTitle("Nachricht bearbeitet")
-                                .setFooter(author.getDisplayName() + " (" + author.getId() + ")",
-                                        author.getAvatar())
-                                .addField("Channel", "<#" + event.getChannel().getId() + ">", true)
-                                .addField("User", "<@" + author.getId() + ">", true)
-                                .addField("Alte Nachricht", oldText.equals("") ? "*Kein Inhalt*" : oldText)
-                                .addField("Bearbeitete Nachricht", newText.equals("") ? "*Kein Inhalt*" : newText);
-                        List<String> files = getFilesFromMessage(msg);
-                        if (files.size() != 0)
-                            embedBuilder.addField("Jetzige Anhänge", formatAttachments(files));
+            ChannelStore.getChannel(guildId, ChannelType.MESSAGE_LOG).ifPresent(channel -> {
+                MessageBuilder builder = new MessageBuilder();
+                builder.addActionRow(
+                        MESSAGE_LINK(event.getMessageLink().get().toString()),
+                        DETAILS(channelId, event.getMessageId()),
+                        DELETE(channelId, event.getMessageId())
+                );
+                EmbedBuilder embedBuilder = new EmbedBuilder()
+                        .setTimestamp(Instant.now())
+                        .setColor(Color.BLUE)
+                        .setTitle("Nachricht bearbeitet")
+                        .setFooter(author.getDisplayName() + " (" + author.getId() + ")",
+                                author.getAvatar())
+                        .addField("Channel", "<#" + event.getChannel().getId() + ">", true)
+                        .addField("User", "<@" + author.getId() + ">", true)
+                        .addField("Alte Nachricht", oldText.equals("") ? "*Kein Inhalt*" : oldText)
+                        .addField("Bearbeitete Nachricht", newText.equals("") ? "*Kein Inhalt*" : newText);
+                List<String> files = getFilesFromMessage(msg);
+                if (files.size() != 0)
+                    embedBuilder.addField("Jetzige Anhänge", formatAttachments(files));
 
-                        embedBuilder
-                                .addField("Message ID: ", event.getMessageId() + "", false);
-                        if (oldText.equals("") || newText.equals("")) embedBuilder.addField("Hinweis",
-                                "Die alte Nachricht hatte " + (oldText.equals("")
-                                        ? "nur Anhänge" : (msgData.files.size() == 0 ? "nur Text" : "Text und Anhänge"))
-                                        + " und hat nun " + (newText.equals("")
-                                        ? "nur Anhänge" : (files.size() == 0 ? "nur Text" : "Text und Anhänge")) + ".");
-                        builder.addEmbed(embedBuilder);
-                        builder.send(channel);
-                    }));
+                embedBuilder
+                        .addField("Message ID: ", event.getMessageId() + "", false);
+                if (oldText.equals("") || newText.equals("")) embedBuilder.addField("Hinweis",
+                        "Die alte Nachricht hatte " + (oldText.equals("")
+                                ? "nur Anhänge" : (msgData.files.size() == 0 ? "nur Text" : "Text und Anhänge"))
+                                + " und hat nun " + (newText.equals("")
+                                ? "nur Anhänge" : (files.size() == 0 ? "nur Text" : "Text und Anhänge")) + ".");
+                builder.addEmbed(embedBuilder);
+                builder.send(channel.asTextChannel().get());
+            });
         });
         //update encrypted message in database
         long messageId = event.getMessageId();
@@ -126,26 +126,25 @@ public class EventAuditListener implements UserRoleAddListener,
             MessageAuthor author = event.getMessageAuthor().get();
             store.saveMessage(null, guildId, channelId, event.getMessageId(), author.getId(), new ArrayList<>());
 
-            ChannelStore.getChannel(guildId, ChannelType.EVENT_AUDIT).ifPresent(id ->
-                    DiscordBot.INSTANCE.api.getTextChannelById(id).ifPresent(channel -> {
-                        MessageBuilder builder = new MessageBuilder();
-                        builder.addActionRow(DETAILS(channelId, event.getMessageId()));
-                        EmbedBuilder eBuilder = new EmbedBuilder()
-                                .setTitle("Nachricht gelöscht")
-                                .setTimestamp(Instant.now())
-                                .setColor(Color.ORANGE)
-                                .setFooter(author.getDisplayName()
-                                        + " (" + author.getId() + ")", author.getAvatar())
-                                .addInlineField("Channel", "<#" + event.getChannel().getId() + ">")
-                                .addInlineField("User", "<@" + author.getId() + ">")
-                                .addField("Gelöschte Nachricht",
-                                        msgContent.equals("") ? "*Kein Inhalt*" : msgContent);
-                        if (msgData.files.size() != 0)
-                            eBuilder.addField("Anhänge", formatAttachments(msgData.files));
-                        if (msgContent.equals("")) eBuilder.addField("Hinweis", "Diese Nachricht hatte nur Text.");
-                        builder.addEmbed(eBuilder);
-                        builder.send(channel);
-                    }));
+            ChannelStore.getChannel(guildId, ChannelType.MESSAGE_LOG).ifPresent(channel -> {
+                MessageBuilder builder = new MessageBuilder();
+                builder.addActionRow(DETAILS(channelId, event.getMessageId()));
+                EmbedBuilder eBuilder = new EmbedBuilder()
+                        .setTitle("Nachricht gelöscht")
+                        .setTimestamp(Instant.now())
+                        .setColor(Color.ORANGE)
+                        .setFooter(author.getDisplayName()
+                                + " (" + author.getId() + ")", author.getAvatar())
+                        .addInlineField("Channel", "<#" + event.getChannel().getId() + ">")
+                        .addInlineField("User", "<@" + author.getId() + ">")
+                        .addField("Gelöschte Nachricht",
+                                msgContent.equals("") ? "*Kein Inhalt*" : msgContent);
+                if (msgData.files.size() != 0)
+                    eBuilder.addField("Anhänge", formatAttachments(msgData.files));
+                if (msgContent.equals("")) eBuilder.addField("Hinweis", "Diese Nachricht hatte nur Text.");
+                builder.addEmbed(eBuilder);
+                builder.send(channel.asTextChannel().get());
+            });
         });
     }
 
@@ -163,33 +162,31 @@ public class EventAuditListener implements UserRoleAddListener,
             long serverId = event.getServer().get().getId();
             long channelId = event.getChannel().getId();
             MessageAuthor author = event.getMessageAuthor();
-            ChannelStore.getChannel(serverId, ChannelType.EVENT_AUDIT).ifPresent(id -> {
-                DiscordBot.INSTANCE.api.getTextChannelById(id).ifPresent(channel -> {
-                    String content = event.getMessageContent();
-                    try {
-                        MessageBuilder builder = new MessageBuilder();
-                        builder.addActionRow(DETAILS(channelId, event.getMessageId()));
-                        EmbedBuilder embedBuilder = new EmbedBuilder()
-                                .setTimestamp(Instant.now())
-                                .setColor(Color.GREEN)
-                                .setTitle("Nachricht mit Anhang gesendet")
-                                .setFooter(author.getDisplayName() + " (" + author.getId() + ")",
-                                        author.getAvatar())
-                                .addField("Channel", "<#" + event.getChannel().getId() + ">", true)
-                                .addField("User", "<@" + author.getId() + ">", true)
+            ChannelStore.getChannel(serverId, ChannelType.MESSAGE_LOG).ifPresent(channel -> {
+                String content = event.getMessageContent();
+                try {
+                    MessageBuilder builder = new MessageBuilder();
+                    builder.addActionRow(DETAILS(channelId, event.getMessageId()));
+                    EmbedBuilder embedBuilder = new EmbedBuilder()
+                            .setTimestamp(Instant.now())
+                            .setColor(Color.GREEN)
+                            .setTitle("Nachricht mit Anhang gesendet")
+                            .setFooter(author.getDisplayName() + " (" + author.getId() + ")",
+                                    author.getAvatar())
+                            .addField("Channel", "<#" + event.getChannel().getId() + ">", true)
+                            .addField("User", "<@" + author.getId() + ">", true)
 
-                                .addField("Inhalt", content.equals("") ? "*Kein Inhalt*" : content)
-                                .addField("Anhänge",
-                                        formatAttachments(getFilesFromMessage(event.getMessage())))
-                                .addField("Message ID: ", event.getMessageId() + "", false);
-                        if (content.equals(""))
-                            embedBuilder.addField("Hinweis", "Diese Nachricht hat keinen Text.");
-                        builder.addEmbed(embedBuilder);
-                        builder.send(channel).exceptionally(ExceptionLogger.get());
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                });
+                            .addField("Inhalt", content.equals("") ? "*Kein Inhalt*" : content)
+                            .addField("Anhänge",
+                                    formatAttachments(getFilesFromMessage(event.getMessage())))
+                            .addField("Message ID: ", event.getMessageId() + "", false);
+                    if (content.equals(""))
+                        embedBuilder.addField("Hinweis", "Diese Nachricht hat keinen Text.");
+                    builder.addEmbed(embedBuilder);
+                    builder.send(channel.asTextChannel().get()).exceptionally(ExceptionLogger.get());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             });
         }
     }
@@ -201,23 +198,21 @@ public class EventAuditListener implements UserRoleAddListener,
 
     private List<String> storeFilesFromMessage(Message msg) {
         if (msg.getAttachments().size() == 0) return new ArrayList<>();
-        Optional<Long> storeOpt = ChannelStore.getChannel(msg.getServer().get().getId(), ChannelType.STORE);
-        if (storeOpt.isPresent()) {
-            Optional<TextChannel> channelOpt = DiscordBot.INSTANCE.api.getTextChannelById(storeOpt.get());
-            if (channelOpt.isPresent()) {
-                MessageBuilder builder = new MessageBuilder()
-                        .addEmbed(EmbedTemplate.info()
-                                .setTitle("Nachrichten-Anhänge")
-                                .setDescription("Nachrichten-Anhänge werden in diesem Channel gespeichert," +
-                                        " um dies zu Erhalten, auch wenn die ursprünglichen Nachrichten" +
-                                        " gelöscht wurden."))
-                        .addActionRow(EventAuditLogButtonTemplates.MESSAGE_LINK(msg.getLink().toString()));
-                for (MessageAttachment attachment : msg.getAttachments()) {
-                    builder.addAttachment(attachment.getUrl());
-                }
-                return getFilesFromMessage(builder.send(channelOpt.get()).join());
+        Optional<ServerChannel> channelOpt = ChannelStore.getChannel(msg.getServer().get().getId(), ChannelType.STORE);
+        if (channelOpt.isPresent()) {
+            MessageBuilder builder = new MessageBuilder()
+                    .addEmbed(EmbedTemplate.info()
+                            .setTitle("Nachrichten-Anhänge")
+                            .setDescription("Nachrichten-Anhänge werden in diesem Channel gespeichert," +
+                                    " um dies zu Erhalten, auch wenn die ursprünglichen Nachrichten" +
+                                    " gelöscht wurden."))
+                    .addActionRow(EventAuditLogButtonTemplates.MESSAGE_LINK(msg.getLink().toString()));
+            for (MessageAttachment attachment : msg.getAttachments()) {
+                builder.addAttachment(attachment.getUrl());
             }
+            return getFilesFromMessage(builder.send(channelOpt.get().asTextChannel().get()).join());
         }
+
         return getFilesFromMessage(msg);
     }
 
