@@ -10,7 +10,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class ChannelStore {
-    public static Optional<ServerChannel> getChannel(long guildId, ChannelType type) {
+    public Optional<ServerChannel> getChannel(long guildId, ChannelType type) {
         Jedis jedis = Database.create();
         String id = jedis.get("channel:" + guildId + ":" + type);
         Database.close(jedis);
@@ -18,7 +18,7 @@ public class ChannelStore {
         return DiscordBot.INSTANCE.api.getServerChannelById(id);
     }
 
-    public static void setChannel(long guildId, long channelId, ChannelType type) {
+    public void setChannel(long guildId, long channelId, ChannelType type) {
 
         Jedis jedis = Database.create();
         jedis.set("channel:" + guildId + ":" + type, channelId + "");

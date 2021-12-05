@@ -9,9 +9,9 @@ import org.javacord.api.event.server.member.ServerMemberJoinEvent;
 import org.javacord.api.event.server.member.ServerMemberLeaveEvent;
 import org.javacord.api.listener.server.member.ServerMemberJoinListener;
 import org.javacord.api.listener.server.member.ServerMemberLeaveListener;
-import re.fffutu.bot4future.DiscordBot;
 import re.fffutu.bot4future.EmbedTemplate;
 import re.fffutu.bot4future.db.ChannelStore;
+import re.fffutu.bot4future.db.Database;
 import re.fffutu.bot4future.db.UserStore;
 
 import java.awt.*;
@@ -19,59 +19,64 @@ import java.time.Instant;
 import java.util.Optional;
 
 public class UserLogListener implements ServerMemberJoinListener, ServerMemberLeaveListener {
+    private final UserStore store = Database.USERS;
+    private final ChannelStore channelStore = Database.CHANNELS;
+
     @Override
     public void onServerMemberJoin(ServerMemberJoinEvent event) {
-        ChannelStore.getChannel(event.getServer().getId(), ChannelStore.ChannelType.USER_LOG).ifPresent(channel -> {
+        channelStore.getChannel(event.getServer().getId(), ChannelStore.ChannelType.USER_LOG).ifPresent(channel -> {
             User user = event.getUser();
-            UserStore.setJoinedTimestamp(event.getServer().getId(), user.getId(), Instant.now());
+            store.setJoinedTimestamp(event.getServer().getId(), user.getId(), Instant.now());
 
             MessageBuilder builder = new MessageBuilder()
                     .addEmbed(EmbedTemplate.base()
-                            .setTitle("User gejoint")
-                            .setColor(Color.GREEN)
-                            .setThumbnail(user.getAvatar())
-                            .addField("Name", user.getDiscriminatedName(), true)
-                            .addField("Anzeige-Name", user.getDisplayName(event.getServer()), true)
-                            .addField("ID", user.getId() + "", false)
-                            .addField("Erstellt",
-                                    "<t:" + user.getCreationTimestamp().getEpochSecond() + ":R>")
+                                           .setTitle("User gejoint")
+                                           .setColor(Color.GREEN)
+                                           .setThumbnail(user.getAvatar())
+                                           .addField("Name", user.getDiscriminatedName(), true)
+                                           .addField("Anzeige-Name", user.getDisplayName(event.getServer()), true)
+                                           .addField("ID", user.getId() + "", false)
+                                           .addField("Erstellt",
+                                                     "<t:" + user.getCreationTimestamp().getEpochSecond() + ":R>")
                     )
                     .addActionRow(new ButtonBuilder()
-                            .setCustomId("user-details:" + user.getId())
-                            .setStyle(ButtonStyle.PRIMARY)
-                            .setLabel("Details")
-                            .build());
+                                          .setCustomId("user-details:" + user.getId())
+                                          .setStyle(ButtonStyle.PRIMARY)
+                                          .setLabel("Details")
+                                          .build());
             builder.send(channel.asTextChannel().get());
         });
     }
 
     @Override
     public void onServerMemberLeave(ServerMemberLeaveEvent event) {
-        ChannelStore.getChannel(event.getServer().getId(), ChannelStore.ChannelType.USER_LOG).ifPresent(channel -> {
+        channelStore.getChannel(event.getServer().getId(), ChannelStore.ChannelType.USER_LOG).ifPresent(channel -> {
             User user = event.getUser();
             MessageBuilder builder = new MessageBuilder();
             EmbedBuilder embedBuilder = EmbedTemplate.base()
-                    .setTitle("User geleavt")
-                    .setColor(Color.RED)
-                    .setThumbnail(user.getAvatar())
-                    .addField("Name", user.getDiscriminatedName(), true)
-                    .addField("Anzeige-Name", user.getDisplayName(event.getServer()), true)
-                    .addField("ID", user.getId() + "", false)
-                    .addField("Erstellt",
-                            "<t:" + user.getCreationTimestamp().getEpochSecond() + ":R>");
-            Optional<Instant> optionalInstant = UserStore.getJoinedTimestamp(event.getServer().getId(),
-                    user.getId()).join();
-            UserStore.deleteJoinedTimestamp(event.getServer().getId(), user.getId());
+                                                     .setTitle("User geleavt")
+                                                     .setColor(Color.RED)
+                                                     .setThumbnail(user.getAvatar())
+                                                     .addField("Name", user.getDiscriminatedName(), true)
+                                                     .addField("Anzeige-Name", user.getDisplayName(event.getServer()),
+                                                               true)
+                                                     .addField("ID", user.getId() + "", false)
+                                                     .addField("Erstellt",
+                                                               "<t:" + user.getCreationTimestamp().getEpochSecond() +
+                                                                       ":R>");
+            Optional<Instant> optionalInstant = store.getJoinedTimestamp(event.getServer().getId(),
+                                                                         user.getId()).join();
+            store.deleteJoinedTimestamp(event.getServer().getId(), user.getId());
             if (optionalInstant.isPresent()) {
                 embedBuilder.addField("Gejoint",
-                        "<t:" + optionalInstant.get().getEpochSecond() + ":R>");
+                                      "<t:" + optionalInstant.get().getEpochSecond() + ":R>");
             }
             builder.addEmbed(embedBuilder)
-                    .addActionRow(new ButtonBuilder()
-                            .setCustomId("user-details:" + user.getId())
-                            .setStyle(ButtonStyle.PRIMARY)
-                            .setLabel("Details")
-                            .build());
+                   .addActionRow(new ButtonBuilder()
+                                         .setCustomId("user-details:" + user.getId())
+                                         .setStyle(ButtonStyle.PRIMARY)
+                                         .setLabel("Details")
+                                         .build());
             builder.send(channel.asTextChannel().get());
         });
     }

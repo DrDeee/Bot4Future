@@ -1,7 +1,6 @@
 package re.fffutu.bot4future.db;
 
 import org.javacord.api.entity.permission.Role;
-import org.javacord.api.entity.server.Server;
 import re.fffutu.bot4future.DiscordBot;
 import redis.clients.jedis.Jedis;
 
@@ -24,7 +23,8 @@ public class RoleStore {
 
     public enum RoleType {
         ADMINISTRATOR("Administrator"),
-        MODERATOR("Moderator");
+        MODERATOR("Moderator"),
+        MUTED("Mute-Rolle");
 
         private String display;
 
@@ -36,6 +36,7 @@ public class RoleStore {
         public String getName() {
             return display;
         }
+
         @Override
         public String toString() {
             return display.toLowerCase();

@@ -7,17 +7,15 @@ import org.simpleyaml.configuration.file.YamlFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import re.fffutu.bot4future.config.ConfigCommand;
-import re.fffutu.bot4future.db.ChannelStore;
 import re.fffutu.bot4future.db.Database;
-import re.fffutu.bot4future.db.RoleStore;
 import re.fffutu.bot4future.logging.EventAuditListener;
 import re.fffutu.bot4future.logging.ServerLogListener;
 import re.fffutu.bot4future.logging.UserLogListener;
 import re.fffutu.bot4future.logging.actions.MessageDeleteActionListener;
 import re.fffutu.bot4future.logging.actions.MessageDetailsActionListener;
-import re.fffutu.bot4future.moderation.BanCommand;
-import re.fffutu.bot4future.moderation.UserinfoCommand;
+import re.fffutu.bot4future.moderation.*;
 import re.fffutu.bot4future.util.CommandManager;
+import re.fffutu.bot4future.util.TimedTaskManager;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -31,18 +29,19 @@ public class DiscordBot {
     public Configuration config;
 
     public CommandManager commandManager = new CommandManager();
+    public TimedTaskManager timedTaskManager = new TimedTaskManager();
 
     private Logger logger = LoggerFactory.getLogger("main");
-
-    public static void main(String[] args) {
-        new DiscordBot();
-    }
 
     public DiscordBot() {
         INSTANCE = this;
         loadConfig();
         Database.init();
         start();
+    }
+
+    public static void main(String[] args) {
+        new DiscordBot();
     }
 
     private void loadConfig() {
@@ -79,7 +78,6 @@ public class DiscordBot {
         builder.setToken(config.getString("token"));
         builder.setAllIntents();
 
-        new RoleStore().setRole(691691563805573121L, RoleStore.RoleType.ADMINISTRATOR, 729314493074505758L);
         logger.info("Anmelden bei Discord..");
         builder.login().thenAccept(discordApi -> {
             this.api = discordApi;
@@ -95,16 +93,23 @@ public class DiscordBot {
             api.addListener(new UserLogListener());
             api.addListener(new ServerLogListener());
 
+            // moderation
+            api.addListener(new ModerationListener());
+
             //ADD COMMANDS
 
             // moderation
             commandManager.addCommand("ban", new BanCommand());
+            commandManager.addCommand("warn", new WarnCommand());
+            commandManager.addCommand("mute", new MuteCommand());
 
             // configuration
             commandManager.addCommand("config", new ConfigCommand());
             commandManager.addCommand("userinfo", new UserinfoCommand());
 
             commandManager.register();
+
+            timedTaskManager.init(api);
         });
     }
 }

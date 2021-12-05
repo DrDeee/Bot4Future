@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import re.fffutu.bot4future.DiscordBot;
 import re.fffutu.bot4future.EmbedTemplate;
+import re.fffutu.bot4future.db.Database;
 import re.fffutu.bot4future.db.RoleStore;
 
 import java.util.*;
@@ -21,7 +22,7 @@ public class CommandManager {
     private static final Logger logger = LoggerFactory.getLogger("command manager");
     private Map<String, Command> commands = new HashMap<>();
 
-    private final RoleStore store = new RoleStore();
+    private final RoleStore store = Database.ROLES;
 
     public void register(boolean clean) {
         DiscordApi api = DiscordBot.INSTANCE.api;

@@ -13,6 +13,7 @@ import org.javacord.api.listener.interaction.ButtonClickListener;
 import org.javacord.api.util.logging.ExceptionLogger;
 import re.fffutu.bot4future.DiscordBot;
 import re.fffutu.bot4future.EmbedTemplate;
+import re.fffutu.bot4future.db.Database;
 import re.fffutu.bot4future.logging.MessageData;
 import re.fffutu.bot4future.db.MessageStore;
 
@@ -23,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 import static re.fffutu.bot4future.logging.EventAuditLogButtonTemplates.*;
 
 public class MessageDetailsActionListener implements ButtonClickListener {
-    MessageStore store = new MessageStore();
+    MessageStore store = Database.MESSAGES;
 
     @Override
     public void onButtonClick(ButtonClickEvent event) {

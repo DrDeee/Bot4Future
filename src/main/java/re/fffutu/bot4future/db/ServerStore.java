@@ -2,32 +2,31 @@ package re.fffutu.bot4future.db;
 
 import redis.clients.jedis.Jedis;
 
-import java.util.List;
 import java.util.Set;
 
 public class ServerStore {
     public static final String LOGGED_THREADS = "logged_threads";
 
-    public static boolean isInSet(long serverId, String setName, String element) {
+    public boolean isInSet(long serverId, String setName, String element) {
         Jedis jedis = Database.create();
         boolean isMember = jedis.sismember("server:" + serverId + ":lists:" + setName, element);
         Database.close(jedis);
         return isMember;
     }
 
-    public static void addToSet(long serverId, String setName, String element) {
+    public void addToSet(long serverId, String setName, String element) {
         Jedis jedis = Database.create();
         jedis.sadd("server:" + serverId + ":lists:" + setName, element);
         Database.close(jedis);
     }
 
-    public static void removeFromSet(long serverId, String setName, String element) {
+    public void removeFromSet(long serverId, String setName, String element) {
         Jedis jedis = Database.create();
         jedis.srem("server:" + serverId + ":lists:" + setName, element);
         Database.close(jedis);
     }
 
-    public static Set<String> getSet(long serverId, String setName) {
+    public Set<String> getSet(long serverId, String setName) {
         Jedis jedis = Database.create();
         Set<String> set = jedis.smembers("server:" + serverId + ":lists:" + setName);
         Database.close(jedis);

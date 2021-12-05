@@ -7,7 +7,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class UserStore {
-    public static CompletableFuture<Optional<Instant>> getJoinedTimestamp(long serverId, long userId) {
+    public CompletableFuture<Optional<Instant>> getJoinedTimestamp(long serverId, long userId) {
         return CompletableFuture.supplyAsync(() -> {
             Jedis jedis = Database.create();
             String ts = jedis.get("user:joinTs:" + userId + ":" + serverId);
@@ -17,7 +17,7 @@ public class UserStore {
         });
     }
 
-    public static CompletableFuture setJoinedTimestamp(long serverId, long userId, Instant ts) {
+    public CompletableFuture setJoinedTimestamp(long serverId, long userId, Instant ts) {
         return CompletableFuture.runAsync(() -> {
             Jedis jedis = Database.create();
             jedis.set("user:joinTs:" + userId + ":" + serverId, ts.getEpochSecond() + "");
@@ -25,7 +25,7 @@ public class UserStore {
         });
     }
 
-    public static CompletableFuture deleteJoinedTimestamp(long serverId, long userId) {
+    public CompletableFuture deleteJoinedTimestamp(long serverId, long userId) {
         return CompletableFuture.runAsync(() -> {
             Jedis jedis = Database.create();
             jedis.del("user:joinTs:" + userId + ":" + serverId);

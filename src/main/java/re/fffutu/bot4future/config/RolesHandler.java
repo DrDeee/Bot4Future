@@ -5,7 +5,9 @@ import org.javacord.api.interaction.*;
 import org.javacord.api.interaction.callback.InteractionCallbackDataFlag;
 import org.javacord.api.interaction.callback.InteractionImmediateResponseBuilder;
 import re.fffutu.bot4future.EmbedTemplate;
+import re.fffutu.bot4future.db.Database;
 import re.fffutu.bot4future.db.RoleStore;
+import re.fffutu.bot4future.db.RoleStore.RoleType;
 import re.fffutu.bot4future.util.SubcommandHandler;
 
 import java.awt.*;
@@ -13,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class RolesHandler implements SubcommandHandler {
-    private RoleStore store = new RoleStore();
+    private RoleStore store = Database.ROLES;
 
     private static SlashCommandOption ROLE = SlashCommandOption.create(SlashCommandOptionType.ROLE,
             "rolle",
@@ -37,6 +39,12 @@ public class RolesHandler implements SubcommandHandler {
                         .setType(SlashCommandOptionType.SUB_COMMAND)
                         .addOption(ROLE)
                         .build())
+                .addOption(new SlashCommandOptionBuilder()
+                                   .setName("muterole")
+                                   .setDescription("Setze die Mute-Rolle, oder lasse sie dir anzeigen.")
+                                   .setType(SlashCommandOptionType.SUB_COMMAND)
+                                   .addOption(ROLE)
+                                   .build())
                 .build();
     }
 
@@ -52,6 +60,10 @@ public class RolesHandler implements SubcommandHandler {
             }
             case "moderator": {
                 type = RoleStore.RoleType.MODERATOR;
+                break;
+            }
+            case "muterole": {
+                type = RoleType.MUTED;
                 break;
             }
         }

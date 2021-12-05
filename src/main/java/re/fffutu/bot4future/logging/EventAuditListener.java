@@ -1,29 +1,22 @@
 package re.fffutu.bot4future.logging;
 
 import org.javacord.api.entity.channel.ServerChannel;
-import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageAttachment;
 import org.javacord.api.entity.message.MessageAuthor;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
-import org.javacord.api.event.channel.thread.ThreadCreateEvent;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.event.message.MessageDeleteEvent;
 import org.javacord.api.event.message.MessageEditEvent;
-import org.javacord.api.event.server.role.UserRoleAddEvent;
-import org.javacord.api.event.server.role.UserRoleRemoveEvent;
-import org.javacord.api.listener.channel.server.thread.ServerThreadChannelCreateListener;
 import org.javacord.api.listener.message.MessageCreateListener;
 import org.javacord.api.listener.message.MessageDeleteListener;
 import org.javacord.api.listener.message.MessageEditListener;
-import org.javacord.api.listener.server.role.UserRoleAddListener;
-import org.javacord.api.listener.server.role.UserRoleRemoveListener;
 import org.javacord.api.util.logging.ExceptionLogger;
-import re.fffutu.bot4future.DiscordBot;
 import re.fffutu.bot4future.EmbedTemplate;
 import re.fffutu.bot4future.db.ChannelStore;
 import re.fffutu.bot4future.db.ChannelStore.ChannelType;
+import re.fffutu.bot4future.db.Database;
 import re.fffutu.bot4future.db.MessageStore;
 
 import java.awt.*;
@@ -41,7 +34,8 @@ public class EventAuditListener implements
         MessageDeleteListener,
         MessageCreateListener {
 
-    private MessageStore store = new MessageStore();
+    private MessageStore messageStore = Database.MESSAGES;
+    private ChannelStore channelStore = Database.CHANNELS;
 
 
     @Override
@@ -57,13 +51,13 @@ public class EventAuditListener implements
         String newText = msg.getContent();
 
         //TODO IGNORED CHANNELS
-        store.getMessage(guildId, channelId, event.getMessageId()).thenAccept(msgData -> {
+        messageStore.getMessage(guildId, channelId, event.getMessageId()).thenAccept(msgData -> {
             String oldText;
             if (msgData == null) return;
             else oldText = msgData.content;
 
             MessageAuthor author = event.getMessageAuthor().get();
-            ChannelStore.getChannel(guildId, ChannelType.MESSAGE_LOG).ifPresent(channel -> {
+            channelStore.getChannel(guildId, ChannelType.MESSAGE_LOG).ifPresent(channel -> {
                 MessageBuilder builder = new MessageBuilder();
                 builder.addActionRow(
                         MESSAGE_LINK(event.getMessageLink().get().toString()),
@@ -75,7 +69,7 @@ public class EventAuditListener implements
                         .setColor(Color.BLUE)
                         .setTitle("Nachricht bearbeitet")
                         .setFooter(author.getDisplayName() + " (" + author.getId() + ")",
-                                author.getAvatar())
+                                   author.getAvatar())
                         .addField("Channel", "<#" + event.getChannel().getId() + ">", true)
                         .addField("User", "<@" + author.getId() + ">", true)
                         .addField("Alte Nachricht", oldText.equals("") ? "*Kein Inhalt*" : oldText)
@@ -87,10 +81,20 @@ public class EventAuditListener implements
                 embedBuilder
                         .addField("Message ID: ", event.getMessageId() + "", false);
                 if (oldText.equals("") || newText.equals("")) embedBuilder.addField("Hinweis",
-                        "Die alte Nachricht hatte " + (oldText.equals("")
-                                ? "nur Anhänge" : (msgData.files.size() == 0 ? "nur Text" : "Text und Anhänge"))
-                                + " und hat nun " + (newText.equals("")
-                                ? "nur Anhänge" : (files.size() == 0 ? "nur Text" : "Text und Anhänge")) + ".");
+                                                                                    "Die alte Nachricht hatte " +
+                                                                                            (oldText.equals("")
+                                                                                                    ? "nur Anhänge" :
+                                                                                                    (msgData.files.size() ==
+                                                                                                            0 ?
+                                                                                                            "nur Text" :
+                                                                                                            "Text und Anhänge"))
+                                                                                            + " und hat nun " +
+                                                                                            (newText.equals("")
+                                                                                                    ? "nur Anhänge" :
+                                                                                                    (files.size() == 0 ?
+                                                                                                            "nur Text" :
+                                                                                                            "Text und Anhänge")) +
+                                                                                            ".");
                 builder.addEmbed(embedBuilder);
                 builder.send(channel.asTextChannel().get());
             });
@@ -98,8 +102,8 @@ public class EventAuditListener implements
         //update encrypted message in database
         long messageId = event.getMessageId();
         long userId = msg.getAuthor().getId();
-        store.updateMessage(newText, guildId, channelId, messageId, userId,
-                storeFilesFromMessage(event.getMessage().get()));
+        messageStore.updateMessage(newText, guildId, channelId, messageId, userId,
+                                   storeFilesFromMessage(event.getMessage().get()));
     }
 
     @Override
@@ -110,15 +114,15 @@ public class EventAuditListener implements
 
 
         // TODO IGNORED CHANNELS
-        store.getMessage(guildId,
-                channelId, event.getMessageId()).thenAccept(msgData -> {
+        messageStore.getMessage(guildId,
+                                channelId, event.getMessageId()).thenAccept(msgData -> {
             String msgContent;
             if (msgData == null) return;
             else msgContent = msgData.content;
             MessageAuthor author = event.getMessageAuthor().get();
-            store.saveMessage(null, guildId, channelId, event.getMessageId(), author.getId(), new ArrayList<>());
+            messageStore.saveMessage(null, guildId, channelId, event.getMessageId(), author.getId(), new ArrayList<>());
 
-            ChannelStore.getChannel(guildId, ChannelType.MESSAGE_LOG).ifPresent(channel -> {
+            channelStore.getChannel(guildId, ChannelType.MESSAGE_LOG).ifPresent(channel -> {
                 MessageBuilder builder = new MessageBuilder();
                 builder.addActionRow(DETAILS(channelId, event.getMessageId()));
                 EmbedBuilder eBuilder = new EmbedBuilder()
@@ -126,11 +130,11 @@ public class EventAuditListener implements
                         .setTimestamp(Instant.now())
                         .setColor(Color.ORANGE)
                         .setFooter(author.getDisplayName()
-                                + " (" + author.getId() + ")", author.getAvatar())
+                                           + " (" + author.getId() + ")", author.getAvatar())
                         .addInlineField("Channel", "<#" + event.getChannel().getId() + ">")
                         .addInlineField("User", "<@" + author.getId() + ">")
                         .addField("Gelöschte Nachricht",
-                                msgContent.equals("") ? "*Kein Inhalt*" : msgContent);
+                                  msgContent.equals("") ? "*Kein Inhalt*" : msgContent);
                 if (msgData.files.size() != 0)
                     eBuilder.addField("Anhänge", formatAttachments(msgData.files));
                 if (msgContent.equals("")) eBuilder.addField("Hinweis", "Diese Nachricht hatte nur Text.");
@@ -143,18 +147,18 @@ public class EventAuditListener implements
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
         if (!event.getServer().isPresent() || !event.getMessageAuthor().isRegularUser()) return;
-        store.saveMessage(event.getMessageContent(),
-                event.getServer().get().getId(),
-                event.getChannel().getId(),
-                event.getMessageId(),
-                event.getMessageAuthor().getId(),
-                storeFilesFromMessage(event.getMessage()));
+        messageStore.saveMessage(event.getMessageContent(),
+                                 event.getServer().get().getId(),
+                                 event.getChannel().getId(),
+                                 event.getMessageId(),
+                                 event.getMessageAuthor().getId(),
+                                 storeFilesFromMessage(event.getMessage()));
 
         if (event.getMessageAttachments().size() != 0) {
             long serverId = event.getServer().get().getId();
             long channelId = event.getChannel().getId();
             MessageAuthor author = event.getMessageAuthor();
-            ChannelStore.getChannel(serverId, ChannelType.MESSAGE_LOG).ifPresent(channel -> {
+            channelStore.getChannel(serverId, ChannelType.MESSAGE_LOG).ifPresent(channel -> {
                 String content = event.getMessageContent();
                 try {
                     MessageBuilder builder = new MessageBuilder();
@@ -164,13 +168,13 @@ public class EventAuditListener implements
                             .setColor(Color.GREEN)
                             .setTitle("Nachricht mit Anhang gesendet")
                             .setFooter(author.getDisplayName() + " (" + author.getId() + ")",
-                                    author.getAvatar())
+                                       author.getAvatar())
                             .addField("Channel", "<#" + event.getChannel().getId() + ">", true)
                             .addField("User", "<@" + author.getId() + ">", true)
 
                             .addField("Inhalt", content.equals("") ? "*Kein Inhalt*" : content)
                             .addField("Anhänge",
-                                    formatAttachments(getFilesFromMessage(event.getMessage())))
+                                      formatAttachments(getFilesFromMessage(event.getMessage())))
                             .addField("Message ID: ", event.getMessageId() + "", false);
                     if (content.equals(""))
                         embedBuilder.addField("Hinweis", "Diese Nachricht hat keinen Text.");
@@ -185,19 +189,19 @@ public class EventAuditListener implements
 
     private List<String> getFilesFromMessage(Message msg) {
         return msg.getAttachments().stream().map(MessageAttachment::getUrl)
-                .map(URL::toString).collect(Collectors.toList());
+                  .map(URL::toString).collect(Collectors.toList());
     }
 
     private List<String> storeFilesFromMessage(Message msg) {
         if (msg.getAttachments().size() == 0) return new ArrayList<>();
-        Optional<ServerChannel> channelOpt = ChannelStore.getChannel(msg.getServer().get().getId(), ChannelType.STORE);
+        Optional<ServerChannel> channelOpt = channelStore.getChannel(msg.getServer().get().getId(), ChannelType.STORE);
         if (channelOpt.isPresent()) {
             MessageBuilder builder = new MessageBuilder()
                     .addEmbed(EmbedTemplate.info()
-                            .setTitle("Nachrichten-Anhänge")
-                            .setDescription("Nachrichten-Anhänge werden in diesem Channel gespeichert," +
-                                    " um dies zu Erhalten, auch wenn die ursprünglichen Nachrichten" +
-                                    " gelöscht wurden."))
+                                           .setTitle("Nachrichten-Anhänge")
+                                           .setDescription("Nachrichten-Anhänge werden in diesem Channel gespeichert," +
+                                                                   " um dies zu Erhalten, auch wenn die ursprünglichen Nachrichten" +
+                                                                   " gelöscht wurden."))
                     .addActionRow(EventAuditLogButtonTemplates.MESSAGE_LINK(msg.getLink().toString()));
             for (MessageAttachment attachment : msg.getAttachments()) {
                 builder.addAttachment(attachment.getUrl());
