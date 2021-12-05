@@ -37,12 +37,6 @@ public class RolesHandler implements SubcommandHandler {
                         .setType(SlashCommandOptionType.SUB_COMMAND)
                         .addOption(ROLE)
                         .build())
-                .addOption(new SlashCommandOptionBuilder()
-                        .setName("muted")
-                        .setDescription("Setze die Mute-Rolle, oder lasse sie dir anzeigen.")
-                        .setType(SlashCommandOptionType.SUB_COMMAND)
-                        .addOption(ROLE)
-                        .build())
                 .build();
     }
 
@@ -58,10 +52,6 @@ public class RolesHandler implements SubcommandHandler {
             }
             case "moderator": {
                 type = RoleStore.RoleType.MODERATOR;
-                break;
-            }
-            case "muted": {
-                type = RoleStore.RoleType.MUTED;
                 break;
             }
         }

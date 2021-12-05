@@ -6,6 +6,7 @@ import redis.clients.jedis.Jedis;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -20,6 +21,7 @@ public class AuditStore {
         public long createdAt = 0;
         public long expiresAt = 0;
 
+
         public AuditType type;
 
         @Override
@@ -31,12 +33,11 @@ public class AuditStore {
 
     public enum AuditType {
         BAN,
-        TEMPBAN,
         MUTE,
         WARN
     }
 
-    List<AuditEntry> getAuditEntries(long guildId, long userId) {
+    public List<AuditEntry> getAuditEntries(long guildId, long userId) {
         Jedis jedis = Database.create();
         List<AuditEntry> entries = jedis.lrange("audit:" + guildId + ":" + userId, 0, -1)
                 .stream()
@@ -46,13 +47,13 @@ public class AuditStore {
         return entries;
     }
 
-    void addAuditEntry(long guildId, long userId, AuditEntry entry) {
+    public void addAuditEntry(long guildId, long userId, AuditEntry entry) {
         Jedis jedis = Database.create();
         jedis.rpush("audit:" + guildId + ":" + userId, GSON.toJson(entry));
         Database.close(jedis);
     }
 
-    void updateAuditEntry(long guildId, long userId, UUID id, AuditEntry entry) {
+    public void updateAuditEntry(long guildId, long userId, UUID id, AuditEntry entry) {
         List<AuditEntry> entries = getAuditEntries(guildId, userId);
         Jedis jedis = Database.create();
         for (int i = 0; i < entries.size(); i++) {

@@ -11,10 +11,12 @@ import re.fffutu.bot4future.db.ChannelStore;
 import re.fffutu.bot4future.db.Database;
 import re.fffutu.bot4future.db.RoleStore;
 import re.fffutu.bot4future.logging.EventAuditListener;
+import re.fffutu.bot4future.logging.ServerLogListener;
 import re.fffutu.bot4future.logging.UserLogListener;
 import re.fffutu.bot4future.logging.actions.MessageDeleteActionListener;
 import re.fffutu.bot4future.logging.actions.MessageDetailsActionListener;
 import re.fffutu.bot4future.moderation.BanCommand;
+import re.fffutu.bot4future.moderation.UserinfoCommand;
 import re.fffutu.bot4future.util.CommandManager;
 
 import java.util.concurrent.Executors;
@@ -91,6 +93,7 @@ public class DiscordBot {
             api.addListener(new MessageDetailsActionListener());
 
             api.addListener(new UserLogListener());
+            api.addListener(new ServerLogListener());
 
             //ADD COMMANDS
 
@@ -99,20 +102,9 @@ public class DiscordBot {
 
             // configuration
             commandManager.addCommand("config", new ConfigCommand());
+            commandManager.addCommand("userinfo", new UserinfoCommand());
 
             commandManager.register();
-
-            api.addMessageCreateListener(e -> {
-                if (e.getMessageContent().equals("-here")) {
-                    ChannelStore.setChannel(e.getServer().get().getId(), e.getChannel().getId(), ChannelStore.ChannelType.MESSAGE_LOG);
-                }
-                if (e.getMessageContent().equals("-here2")) {
-                    ChannelStore.setChannel(e.getServer().get().getId(), e.getChannel().getId(), ChannelStore.ChannelType.STORE);
-                }
-                if (e.getMessageContent().equals("-here3")) {
-                    ChannelStore.setChannel(e.getServer().get().getId(), e.getChannel().getId(), ChannelStore.ChannelType.USER_LOG);
-                }
-            });
         });
     }
 }

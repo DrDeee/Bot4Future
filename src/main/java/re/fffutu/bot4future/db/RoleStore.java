@@ -24,8 +24,7 @@ public class RoleStore {
 
     public enum RoleType {
         ADMINISTRATOR("Administrator"),
-        MODERATOR("Moderator"),
-        MUTED("Mute");
+        MODERATOR("Moderator");
 
         private String display;
 

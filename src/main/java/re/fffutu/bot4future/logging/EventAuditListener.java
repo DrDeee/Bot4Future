@@ -7,11 +7,13 @@ import org.javacord.api.entity.message.MessageAttachment;
 import org.javacord.api.entity.message.MessageAuthor;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.event.channel.thread.ThreadCreateEvent;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.event.message.MessageDeleteEvent;
 import org.javacord.api.event.message.MessageEditEvent;
 import org.javacord.api.event.server.role.UserRoleAddEvent;
 import org.javacord.api.event.server.role.UserRoleRemoveEvent;
+import org.javacord.api.listener.channel.server.thread.ServerThreadChannelCreateListener;
 import org.javacord.api.listener.message.MessageCreateListener;
 import org.javacord.api.listener.message.MessageDeleteListener;
 import org.javacord.api.listener.message.MessageEditListener;
@@ -34,23 +36,13 @@ import java.util.stream.Collectors;
 
 import static re.fffutu.bot4future.logging.EventAuditLogButtonTemplates.*;
 
-public class EventAuditListener implements UserRoleAddListener,
-        UserRoleRemoveListener,
+public class EventAuditListener implements
         MessageEditListener,
         MessageDeleteListener,
         MessageCreateListener {
 
     private MessageStore store = new MessageStore();
 
-    @Override
-    public void onUserRoleAdd(UserRoleAddEvent userRoleAddEvent) {
-
-    }
-
-    @Override
-    public void onUserRoleRemove(UserRoleRemoveEvent userRoleRemoveEvent) {
-
-    }
 
     @Override
     public void onMessageEdit(MessageEditEvent event) {
@@ -223,4 +215,5 @@ public class EventAuditListener implements UserRoleAddListener,
         }
         return sb.toString();
     }
+
 }

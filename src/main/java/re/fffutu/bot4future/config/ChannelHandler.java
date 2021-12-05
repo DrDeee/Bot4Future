@@ -109,9 +109,9 @@ public class ChannelHandler implements SubcommandHandler {
                         .respond();
             } else {
                 responder.addEmbed(EmbedTemplate.info()
-                                .setTitle("Server-Rolle: " + type.getName())
-                                .setDescription("Diese Rolle wurde für diesen Server noch nicht definiert!" +
-                                        " Gebe dafür noch die Rolle als Parameter an!"))
+                                .setTitle("Server-Channel: " + type.getName())
+                                .setDescription("Dieser Channel wurde für diesen Server noch nicht definiert!" +
+                                        " Gebe dafür noch den Channel als Parameter an!"))
                         .respond();
             }
         } else {
