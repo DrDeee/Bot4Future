@@ -8,6 +8,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import re.fffutu.bot4future.config.ConfigCommand;
 import re.fffutu.bot4future.db.Database;
+import re.fffutu.bot4future.dev.GetLogCommand;
+import re.fffutu.bot4future.general.InviteListener;
+import re.fffutu.bot4future.general.UnlockCommand;
+import re.fffutu.bot4future.general.VerifyCommand;
 import re.fffutu.bot4future.logging.EventAuditListener;
 import re.fffutu.bot4future.logging.ServerLogListener;
 import re.fffutu.bot4future.logging.UserLogListener;
@@ -15,6 +19,8 @@ import re.fffutu.bot4future.logging.actions.MessageDeleteActionListener;
 import re.fffutu.bot4future.logging.actions.MessageDetailsActionListener;
 import re.fffutu.bot4future.moderation.*;
 import re.fffutu.bot4future.util.CommandManager;
+import re.fffutu.bot4future.util.ConfigChecker;
+import re.fffutu.bot4future.util.InviteManager;
 import re.fffutu.bot4future.util.TimedTaskManager;
 
 import java.util.concurrent.Executors;
@@ -23,12 +29,12 @@ import java.util.concurrent.ScheduledExecutorService;
 public class DiscordBot {
     public static final ScheduledExecutorService POOL = Executors.newScheduledThreadPool(5);
 
-
     public static DiscordBot INSTANCE;
     public DiscordApi api;
     public Configuration config;
 
     public CommandManager commandManager = new CommandManager();
+    public InviteManager inviteManager = new InviteManager();
     public TimedTaskManager timedTaskManager = new TimedTaskManager();
 
     private Logger logger = LoggerFactory.getLogger("main");
@@ -57,9 +63,11 @@ public class DiscordBot {
             config.load();
 
             config.addDefault("token", "your token here");
-            config.addDefault("devs", new long[]{111111111, 222222222, 333333333});
+            config.addDefault("devs", new long[] { 111111111, 222222222, 333333333 });
             config.addDefault("redis.hostname", "localhost");
             config.addDefault("redis.port", 6379);
+            config.addDefault("dev_server.id", "your devserver id here");
+            config.addDefault("dev_server.log_channel", "your logchannel here");
 
             config.save();
         } catch (final Exception e) {
@@ -68,11 +76,10 @@ public class DiscordBot {
     }
 
     private void start() {
-        if (config.getString("token").equals("your token here")) {
-            logger.error("Kein Bot-Token angegeben! Stoppe Bot..");
-            System.exit(1);
-            return;
-        }
+        logger.debug("Bot startet: " + System.currentTimeMillis());
+
+        ConfigChecker.checkConfigState();
+
         DiscordApiBuilder builder = new DiscordApiBuilder();
 
         builder.setToken(config.getString("token"));
@@ -83,7 +90,14 @@ public class DiscordBot {
             this.api = discordApi;
             logger.info("Discord Bot Online");
 
-            //ADD LISTENERS
+            registerSlashCommands();
+
+            inviteManager.init();
+
+            // ADD LISTENERS
+
+            // automatic roles
+            api.addListener(inviteManager.getHandler());
 
             // logging
             api.addListener(new EventAuditListener());
@@ -96,7 +110,20 @@ public class DiscordBot {
             // moderation
             api.addListener(new ModerationListener());
 
-            //ADD COMMANDS
+            // general
+            api.addListener(new InviteListener());
+
+            timedTaskManager.init(api);
+        });
+    }
+
+    private void registerSlashCommands() {
+        POOL.execute(() -> {
+            // ADD COMMANDS
+
+            // general
+            commandManager.addCommand("verify", new VerifyCommand());
+            commandManager.addCommand("freischalten", new UnlockCommand());
 
             // moderation
             commandManager.addCommand("ban", new BanCommand());
@@ -107,9 +134,10 @@ public class DiscordBot {
             commandManager.addCommand("config", new ConfigCommand());
             commandManager.addCommand("userinfo", new UserinfoCommand());
 
-            commandManager.register();
+            // dev
+            commandManager.addCommand("getlog", new GetLogCommand());
 
-            timedTaskManager.init(api);
+            commandManager.register();
         });
     }
 }

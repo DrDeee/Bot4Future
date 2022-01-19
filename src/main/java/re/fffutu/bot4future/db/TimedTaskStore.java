@@ -13,7 +13,7 @@ public class TimedTaskStore {
     public void saveTimedTask(TimedTask task) {
         Jedis jedis = Database.create();
         jedis.set("timedtask:" + task.id.toString(), gson.toJson(task));
-        jedis.sadd("timedtasks:index", task.id.toString());
+        jedis.sadd("timedtask:index", task.id.toString());
         Database.close(jedis);
     }
 

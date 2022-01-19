@@ -1,12 +1,15 @@
 package re.fffutu.bot4future;
 
 import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import re.fffutu.bot4future.db.AuditStore.AuditEntry;
 import re.fffutu.bot4future.db.AuditStore.AuditType;
+import re.fffutu.bot4future.util.PermissionTranslations;
 
 import java.awt.*;
 import java.time.Instant;
+import java.util.stream.Collectors;
 
 public class EmbedTemplate {
     public static EmbedBuilder base() {
@@ -28,11 +31,17 @@ public class EmbedTemplate {
                 .setColor(new Color(245, 51, 63));
     }
 
+    public static EmbedBuilder errorRoleManaged(Role role) {
+        return error().setDescription("Die Rolle " + role.getMentionTag() + " kann nicht genutzt werden, da diese von" +
+                                              " Discord verwaltet wird.");
+    }
+
     public static EmbedBuilder auditMessage(AuditEntry entry, Server server) {
         EmbedBuilder builder = info()
                 .setTitle("Du wurdest auf dem Server **" + server.getName() + "** " + entry.type.getActionPart())
-                .setThumbnail(server.getIcon().orElse(server.getApi().getYourself().getAvatar()));
-        if (entry.type != AuditType.WARN)
+                .setThumbnail(server.getIcon().orElse(server.getApi().getYourself().getAvatar()))
+                .addField("Grund", entry.reason);
+        if (entry.type == AuditType.WARN)
             builder.addField("Dauer", entry.expiresAt == 0 ? "Permanent" :
                     "Auslauf <t:" + Instant.ofEpochMilli(entry.expiresAt).getEpochSecond() + ":R>");
         String footer = "";
@@ -51,4 +60,19 @@ public class EmbedTemplate {
         }
         return builder.setFooter(footer);
     }
+
+    public static EmbedBuilder logRole(Role role) {
+        return base().setColor(role.getColor().orElse(Color.GRAY))
+                     .addField("Rollen-Name", role.getName())
+                     .addField("Rollen-ID", role.getId() + "")
+                     .addField("Mitglieder", role.getUsers().size() + "")
+                     .addField("Berechtigungen",
+                               role.getAllowedPermissions()
+                                   .stream()
+                                   .map(type -> PermissionTranslations.get(type))
+                                   .sorted()
+                                   .collect(Collectors.joining("\n")));
+    }
+
+    ;
 }

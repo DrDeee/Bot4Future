@@ -26,6 +26,7 @@ public class UserinfoCommand implements CommandManager.Command {
         return new SlashCommandBuilder()
                 .setName("userinfo")
                 .setDescription("Zeigt alle Informationen zu einem User an.")
+                .setDefaultPermission(false)
                 .addOption(SlashCommandOption.create(SlashCommandOptionType.USER,
                                                      "user", "Der User", false))
                 .addOption(SlashCommandOption.create(SlashCommandOptionType.STRING, "id", "Die ID des Users", false));

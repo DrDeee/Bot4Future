@@ -6,6 +6,7 @@ import java.util.Set;
 
 public class ServerStore {
     public static final String LOGGED_THREADS = "logged_threads";
+    public static final String INVITE_CODE = "invite_code";
 
     public boolean isInSet(long serverId, String setName, String element) {
         Jedis jedis = Database.create();
@@ -31,5 +32,18 @@ public class ServerStore {
         Set<String> set = jedis.smembers("server:" + serverId + ":lists:" + setName);
         Database.close(jedis);
         return set;
+    }
+
+    public void setAttribute(long serverId, String attributeName, String value) {
+        Jedis jedis = Database.create();
+        jedis.set("server:" + serverId + ":attibutes:" + attributeName, value);
+        Database.close(jedis);
+    }
+
+    public String getAttribute(long serverId, String attributeName) {
+        Jedis jedis = Database.create();
+        String attrib = jedis.get("server:" + serverId + ":attibutes:" + attributeName);
+        Database.close(jedis);
+        return attrib;
     }
 }

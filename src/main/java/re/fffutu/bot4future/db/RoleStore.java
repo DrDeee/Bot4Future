@@ -19,22 +19,33 @@ public class RoleStore {
         Jedis jedis = Database.create();
         jedis.set("role:" + serverId + ":" + type, roleId + "");
         Database.close(jedis);
+        DiscordBot.INSTANCE.commandManager.updatePermissions(serverId);
     }
 
     public enum RoleType {
-        ADMINISTRATOR("Administrator"),
-        MODERATOR("Moderator"),
-        MUTED("Mute-Rolle");
+        ADMINISTRATOR("Administrator:in", "Administrator:innen-"),
+        MODERATOR("Moderator:in", "Moderator:innen-"),
+        MUTED("Mute-Rolle", "Mute-"),
+        AUTO_ROLE("Auto-Rolle", "Auto-"),
+        GIVABLE_ROLE("Gebbare Rolle", "Gebbare "),
 
-        private String display;
+        MEMBER("Mitglieds-Rolle", "Mitglieds-");
 
-        RoleType(String display) {
+        private final String display;
+        private final String displayPart;
+
+        RoleType(String display, String displayPart) {
             this.display = display;
+            this.displayPart = displayPart;
         }
 
 
         public String getName() {
             return display;
+        }
+
+        public String getNamePart() {
+            return displayPart;
         }
 
         @Override

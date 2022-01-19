@@ -4,6 +4,7 @@ import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.component.ButtonBuilder;
 import org.javacord.api.entity.message.component.ButtonStyle;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.server.member.ServerMemberJoinEvent;
 import org.javacord.api.event.server.member.ServerMemberLeaveEvent;
@@ -11,6 +12,7 @@ import org.javacord.api.listener.server.member.ServerMemberJoinListener;
 import org.javacord.api.listener.server.member.ServerMemberLeaveListener;
 import re.fffutu.bot4future.EmbedTemplate;
 import re.fffutu.bot4future.db.ChannelStore;
+import re.fffutu.bot4future.db.ChannelStore.ChannelType;
 import re.fffutu.bot4future.db.Database;
 import re.fffutu.bot4future.db.UserStore;
 
@@ -19,8 +21,13 @@ import java.time.Instant;
 import java.util.Optional;
 
 public class UserLogListener implements ServerMemberJoinListener, ServerMemberLeaveListener {
+    public static UserLogListener INSTANCE;
     private final UserStore store = Database.USERS;
     private final ChannelStore channelStore = Database.CHANNELS;
+
+    public UserLogListener() {
+        INSTANCE = this;
+    }
 
     @Override
     public void onServerMemberJoin(ServerMemberJoinEvent event) {
@@ -78,6 +85,21 @@ public class UserLogListener implements ServerMemberJoinListener, ServerMemberLe
                                          .setLabel("Details")
                                          .build());
             builder.send(channel.asTextChannel().get());
+        });
+    }
+
+    public void logAutoJoin(Server server, User user) {
+        channelStore.getChannel(server.getId(), ChannelType.USER_LOG).ifPresent(log -> {
+            log.asServerTextChannel()
+               .get()
+               .sendMessage(
+                       EmbedTemplate
+                               .info()
+                               .setTitle("Automatische Rollenvergabe: " +
+                                                 "User gejoint")
+                               .setDescription(user.getDiscriminatedName() + " (" +
+                                                       user.getMentionTag() + ") ist über den festgelegten " +
+                                                       "Einladungslink beigetreten und hat die automatische Rolle bekommen."));
         });
     }
 }

@@ -38,12 +38,12 @@ public class AuditLogger {
 
             log.asTextChannel().get()
                .sendMessage(EmbedTemplate.info()
-                                         .setTitle(entry.type.asString() + ": " + target.getDiscriminatedName())
+                                         .setTitle(entry.type.asString() + " beendet: " + target.getDiscriminatedName())
                                          .setThumbnail(target.getAvatar())
                                          .setDescription(target.getDiscriminatedName() + " (" + target.getMentionTag() +
                                                                  ") wurde automatisch " +
                                                                  entry.type.getActionEndPart() + ".")
-                                         .addField("Ursprünglicher Grund", entry.reason)
+                                         .addField("Grund", entry.reason)
                                          .addField("Start",
                                                    "<t:" + Instant.ofEpochMilli(entry.createdAt).getEpochSecond() +
                                                            ":R>")

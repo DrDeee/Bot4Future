@@ -25,7 +25,7 @@ public class TimedTaskManager {
         store.getTimedTasks().forEach(task -> {
             scheduleTask(task, false);
         });
-        logger.info(pendingTasks.size() + " Tasks scheduled");
+        logger.info(pendingTasks.size() + " Task(s) geplant.");
     }
 
     public void scheduleTask(TimedTask task, boolean save) {
@@ -65,6 +65,7 @@ public class TimedTaskManager {
 
         @Override
         public void run() {
+            System.out.println("Task runned");
             manager.finishTask(task.id);
             AuditEntry entry = Database.AUDIT.getAuditEntryById(task.relatedAudit).orElse(null);
             if (entry == null) return;

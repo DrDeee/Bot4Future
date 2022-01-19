@@ -43,8 +43,8 @@ public class AuditStore {
 
     public enum AuditType {
         BAN("Bann", "gebannt", "entbannt", TimedTaskType.UNBAN),
-        MUTE("Mute", "gemutet", "entmutet", null),
-        WARN("Verwarnung", "verwarnt", null, TimedTaskType.UNMUTE);
+        MUTE("Mute", "gemutet", "entmutet", TimedTaskType.UNMUTE),
+        WARN("Verwarnung", "verwarnt", null, null);
 
         private String name;
         private String actionPart;

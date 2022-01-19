@@ -33,6 +33,7 @@ public class MuteCommand implements Command {
         return new SlashCommandBuilder()
                 .setName("mute")
                 .setDescription("Mute ein Servermitglied für eine bestimmte Zeit.")
+                .setDefaultPermission(false)
                 .addOption(
                         SlashCommandOption.create(SlashCommandOptionType.USER, "user", "Der zu mutenden User", true))
                 .addOption(SlashCommandOption.create(SlashCommandOptionType.STRING, "grund", "Der Mute-Grund", true))
@@ -77,7 +78,7 @@ public class MuteCommand implements Command {
                 return;
             }
 
-            if(millis == 0) {
+            if (millis == 0) {
                 interaction.createImmediateResponder()
                            .addEmbed(EmbedTemplate.error()
                                                   .setDescription(
@@ -120,7 +121,9 @@ public class MuteCommand implements Command {
                                                                           ") wurde erfolgreich gebannt.")
                                                   .addField("Grund", entry.reason)
                                                   .addField("Dauer", millis == 0 ? "Permanent" :
-                                                          "Ende <t:" + TimeUnit.MILLISECONDS.toSeconds(millis) + ":R>"))
+                                                          "Ende <t:" +
+                                                                  TimeUnit.MILLISECONDS.toSeconds(entry.expiresAt) +
+                                                                  ":R>"))
                            .setFlags(InteractionCallbackDataFlag.EPHEMERAL)
                            .respond();
             } else {

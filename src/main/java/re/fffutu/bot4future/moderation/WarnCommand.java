@@ -27,6 +27,7 @@ public class WarnCommand implements Command {
         return new SlashCommandBuilder()
                 .setName("warn")
                 .setDescription("Verwarne einen User")
+                .setDefaultPermission(false)
                 .addOption(SlashCommandOption.create(SlashCommandOptionType.USER, "user",
                                                      "Den zu verwarnenden User", true))
                 .addOption(SlashCommandOption.create(SlashCommandOptionType.STRING, "grund",
