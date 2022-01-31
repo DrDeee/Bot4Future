@@ -97,9 +97,28 @@ public class UserLogListener implements ServerMemberJoinListener, ServerMemberLe
                                .info()
                                .setTitle("Automatische Rollenvergabe: " +
                                                  "User gejoint")
+                               .setThumbnail(user.getAvatar())
                                .setDescription(user.getDiscriminatedName() + " (" +
                                                        user.getMentionTag() + ") ist über den festgelegten " +
-                                                       "Einladungslink beigetreten und hat die automatische Rolle bekommen."));
+                                                       "Einladungslink beigetreten und hat die automatische Rolle bekommen.")
+                               .addField("User", user.getMentionTag())
+                               .addField("User-ID", user.getIdAsString())
+                               .addField("Uhrzeit", String.format("<t:%d:R>", Instant.now().getEpochSecond())));
+        });
+    }
+
+    public void logUserUnlock(Server server, User user) {
+        channelStore.getChannel(server.getId(), ChannelType.USER_LOG).ifPresent(log -> {
+            log.asServerTextChannel()
+                    .get()
+                    .sendMessage(
+                            EmbedTemplate
+                                    .info()
+                                    .setTitle("User-Freischaltung: " + user.getDiscriminatedName())
+                                    .setThumbnail(user.getAvatar())
+                                    .addField("User", user.getMentionTag())
+                                    .addField("User-ID", user.getIdAsString())
+                                    .addField("Uhrzeit", String.format("<t:%d:R>", Instant.now().getEpochSecond())));
         });
     }
 }

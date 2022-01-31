@@ -5,10 +5,10 @@ import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.event.interaction.SlashCommandCreateEvent;
 import org.javacord.api.exception.MissingPermissionsException;
-import org.javacord.api.interaction.ServerSlashCommandPermissionsBuilder;
+import org.javacord.api.interaction.ApplicationCommandPermissionType;
+import org.javacord.api.interaction.ApplicationCommandPermissions;
+import org.javacord.api.interaction.ServerApplicationCommandPermissionsBuilder;
 import org.javacord.api.interaction.SlashCommandBuilder;
-import org.javacord.api.interaction.SlashCommandPermissionType;
-import org.javacord.api.interaction.SlashCommandPermissions;
 import org.javacord.api.interaction.callback.InteractionCallbackDataFlag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +54,7 @@ public class CommandManager {
         logger.info("Alle alten Slash-Commands gelöscht.");
 
         try {
-            api.bulkOverwriteGlobalSlashCommands(commands.values().stream().filter(Command::isGlobal)
+            api.bulkOverwriteGlobalApplicationCommands(commands.values().stream().filter(Command::isGlobal)
                     .map(Command::getBuilder)
                     .collect(Collectors.toList())).join();
         } catch (CompletionException e) {
@@ -62,17 +62,17 @@ public class CommandManager {
         }
         api.getServers().forEach(server -> {
             try {
-                api.bulkOverwriteServerSlashCommands(server,
-                        commands.values()
-                                .stream()
-                                .filter(Command::isServerOnly)
-                                .filter(cmd -> cmd.getAllowedServers()
-                                        .isEmpty() ||
-                                        cmd.getAllowedServers()
-                                                .contains(
-                                                        server.getId()))
-                                .map(Command::getBuilder)
-                                .collect(Collectors.toList()))
+                api.bulkOverwriteServerApplicationCommands(server,
+                                commands.values()
+                                        .stream()
+                                        .filter(Command::isServerOnly)
+                                        .filter(cmd -> cmd.getAllowedServers()
+                                                .isEmpty() ||
+                                                cmd.getAllowedServers()
+                                                        .contains(
+                                                                server.getId()))
+                                        .map(Command::getBuilder)
+                                        .collect(Collectors.toList()))
                         .join();
                 updatePermissions(server, true);
             } catch (Exception e) {
@@ -103,31 +103,36 @@ public class CommandManager {
     }
 
     public void updatePermissions(Server server, boolean silent) {
-        List<ServerSlashCommandPermissionsBuilder> builders = new ArrayList<>();
+        List<ServerApplicationCommandPermissionsBuilder> builders = new ArrayList<>();
         server.getSlashCommands().thenAccept(cmds -> cmds.forEach(cmd -> {
-            List<SlashCommandPermissions> perms = new ArrayList<>();
+            List<ApplicationCommandPermissions> perms = new ArrayList<>();
             if (cmd.getDefaultPermission()) {
                 commands.get(cmd.getName()).getDisallowed().forEach(type -> {
                     Optional<Role> optRole = store.getRole(server.getId(), type);
                     if (optRole.isPresent())
-                        perms.add(SlashCommandPermissions.create(optRole.get().getId(),
-                                SlashCommandPermissionType.ROLE, false));
+                        perms.add(ApplicationCommandPermissions.create(optRole.get().getId(),
+                                ApplicationCommandPermissionType.ROLE, false));
                 });
             } else {
-                perms.add(SlashCommandPermissions.create(server.getOwnerId(), SlashCommandPermissionType.USER,
+                perms.add(ApplicationCommandPermissions.create(server.getOwnerId(), ApplicationCommandPermissionType.USER,
                         true));
                 commands.get(cmd.getName()).getAllowed().forEach(type -> {
                     Optional<Role> optRole = store.getRole(server.getId(), type);
                     if (optRole.isPresent())
-                        perms.add(SlashCommandPermissions.create(optRole.get().getId(),
-                                SlashCommandPermissionType.ROLE, true));
+                        perms.add(ApplicationCommandPermissions.create(optRole.get().getId(),
+                                ApplicationCommandPermissionType.ROLE, true));
                 });
             }
+            if (System.getenv("DEV_ADMIN_USER") != null) {
+                logger.info("Starting with global command admin");
+                perms.add(ApplicationCommandPermissions.create(
+                        Long.parseLong(System.getenv("DEV_ADMIN_USER")), ApplicationCommandPermissionType.USER, true));
+            }
             if (perms.size() != 0)
-                builders.add(new ServerSlashCommandPermissionsBuilder(cmd.getId(),
+                builders.add(new ServerApplicationCommandPermissionsBuilder(cmd.getId(),
                         perms));
         })).join();
-        DiscordBot.INSTANCE.api.batchUpdateSlashCommandPermissions(server, builders).join();
+        DiscordBot.INSTANCE.api.batchUpdateApplicationCommandPermissions(server, builders).join();
         if (!silent)
             logger.info(
                     "Slash-Command-Permissions für den Server \"" + server.getName() + "\" (" + server.getId() + ") " +

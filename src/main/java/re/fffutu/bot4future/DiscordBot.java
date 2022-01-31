@@ -112,6 +112,7 @@ public class DiscordBot {
 
             // general
             api.addListener(new InviteListener());
+            api.addListener(UnlockCommand.LISTENER);
 
             timedTaskManager.init(api);
         });

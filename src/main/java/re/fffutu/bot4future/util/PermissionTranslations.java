@@ -47,7 +47,7 @@ public class PermissionTranslations {
         translations.put(PermissionType.MANAGE_ROLES, "Rollen verwalten");
         translations.put(PermissionType.MANAGE_WEBHOOKS, "Webhooks verwalten");
         translations.put(PermissionType.MANAGE_EMOJIS, "Emojis verwalten");
-        translations.put(PermissionType.USE_SLASH_COMMANDS, "Slash-Commands nutzen");
+        translations.put(PermissionType.USE_APPLICATION_COMMANDS, "Slash-Commands nutzen");
     }
 
     public static String get(PermissionType type) {

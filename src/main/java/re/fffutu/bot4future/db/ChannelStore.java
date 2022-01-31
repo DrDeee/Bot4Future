@@ -33,7 +33,9 @@ public class ChannelStore {
         MESSAGE_LOG("Messagelog-Channel"),
         USER_LOG("Userlog-Channel"),
         SERVER_LOG("Serverlog-Channel"),
-        STORE("Store-Channel");
+        STORE("Store-Channel"),
+
+        WELCOME_CHANNEL("Willkommens-Channel");
 
         private final String name;
         private boolean isText;
